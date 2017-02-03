@@ -13,7 +13,7 @@ nuka is a provisioning tool focused on performance. It massively uses Asyncio an
 It is compatible with docker vagrant and apache-libcloud.
 
 
-Full documentation is available at https://doc.bearstech.com/nuka
+Full documentation is available at http://doc.bearstech.com/nuka
 
 Quickstart
 ==========
@@ -78,6 +78,6 @@ Look at the generated gantt of your deployement::
 
 You'll get a dynamic report like this screenshot:
 
-.. image:: http://doc.bearstech.com/nuka/_images/gantt.png
+.. image:: https://doc.bearstech.com/nuka/_images/gantt.png
    :align: center
 

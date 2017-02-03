@@ -19,7 +19,7 @@ full = ['ujson'] + docker + cloud + test
 setup(
     name='nuka',
     version=version,
-    description="provisionning tool focused on performance.",
+    description="provisioning tool focused on performance.",
     long_description=read('README.rst'),
     classifiers=[
         'Intended Audience :: Developers',
