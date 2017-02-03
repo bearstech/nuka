@@ -1,3 +1,0 @@
-docker-compose
-apache-libcloud
-PyCrypto

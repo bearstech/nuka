@@ -1,7 +1,12 @@
 graft docs
+graft examples
 prune docs/_build
+prune .nuka
+prune examples/.nuka
+prune examples/wordpress/.nuka
 graft nuka
 graft tests
-include *.rst *.cfg *.ini
-global-exclude *.pyc
+include *.txt *.rst *.cfg *.ini Vagrantfile
+global-exclude *.pyc *.swp
 global-exclude __pycache__
+global-exclude .nuka
