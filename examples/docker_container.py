@@ -3,14 +3,10 @@ from nuka.hosts import DockerContainer
 from nuka.tasks import shell
 import nuka
 
-host = DockerContainer(
-    hostname='debian_jessie',
-    image='debian:jessie',
-    command=['bash', '-c', 'while true; do sleep 1000000000000; done'],
-)
+host = DockerContainer(hostname='debian', image='bearstech/nukai')
 
 
-async def f(host):
+async def my_tasks(host):
     await shell.shell('whoami')
 
-nuka.run(f(host))
+nuka.run(my_tasks(host))

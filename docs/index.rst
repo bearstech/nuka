@@ -58,7 +58,7 @@ Index
    api
    tasks
    custom_tasks
-   arch
+   examples
 
 
 
