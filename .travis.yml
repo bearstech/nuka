@@ -1,0 +1,25 @@
+sudo: required
+
+language: python
+python: 3.5
+
+services:
+  - docker
+
+before_install:
+  - docker pull bearstech/nukai:$IMAGE
+
+install:
+  - pip install tox
+
+script:
+  - tox -e py35-nukai-$IMAGE -- -xs
+
+env:
+  - IMAGE=centos-7-python2-testing
+  - IMAGE=debian-wheezy-python2-testing
+  - IMAGE=debian-jessie-python2-testing
+  - IMAGE=debian-jessie-python3-testing
+  - IMAGE=debian-stretch-python2-testing
+  - IMAGE=debian-stretch-python3-testing
+

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+  <head>
+      <meta charset="utf8" />
+      <style>
+        body {
+          font: 12px sans-serif;
+        }
+        #header {
+          position: fixed;
+          top: 0px;
+          margin-bottom: 5px;
+          width: 100%;
+          height:60px;
+        }
+        .controls, .legends {
+            padding: .3em;
+        }
+        .legend {
+            padding:.3em;
+        }
+        #status {
+          position: fixed;
+          top: 0px;
+          right: 0px;
+          width: 40%;
+          background-color: #fff;
+          z-index: 100000;
+          border: thin solid #000;
+          padding: 2px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        #zoom {
+            width: 30%;
+        }
+        #tick {
+            width: 3em;
+        }
+        #wrapper {
+            overflow:none;
+            padding-top:50px;
+            padding-bottom:1px;
+        }
+        #first {
+            position:absolute;
+            top: auto;
+            left: 0px;
+            width: 200px;
+            vertical-align: top;
+            padding-top: 20px;
+            text-align:right;
+            background-color: #fff;
+        }
+        #first > div {
+            border-top: 1px solid rgb(200, 200, 200);
+            border-right: 1px solid rgb(200, 200, 200);
+        }
+        #first div div {
+            overflow: hidden;
+            border-bottom: 1px solid rgb(200, 200, 200);
+            padding-right: 3px;
+        }
+        svg {
+            margin-left: 190px;
+        }
+        .task {
+            fill: rgb(230, 230, 230);
+            background-color: rgb(230, 230, 230);
+        }
+        .show_line {
+            fill: rgb(240, 240, 240);
+            background-color: rgb(240, 240, 240);
+        }
+        .hide_line {
+            fill: rgb(255, 255, 255);
+            background-color: rgb(255, 255, 255);
+        }
+        .pre_process, .api_call {
+            fill: rgb(248, 223, 223);
+            background-color: rgb(248, 223, 223);
+        }
+        .process {
+            fill: rgb(223, 248, 223);
+            background-color: rgb(223, 248, 223);
+        }
+        .sh {
+            fill: rgb(223, 223, 248);
+            background-color: rgb(223, 223, 248);
+        }
+        line {
+            stroke:rgb(200,200,200);
+            stroke-width:1;
+        }
+        .show {
+            display: block;
+        }
+        .hide {
+            display: none;
+        }
+      </style>
+      <script>
+        var host_datas = {{dumped_data}}
+      </script>
+  </head>
+  <body>
+      <div id="header">
+          <div class="controls">
+              <select id="host">
+              </select>
+
+              <label for="tick">Tick:</label>
+              <input type="number" id="tick" value="60" />
+
+              <label for="zoom">Zoom:</label>
+              <input type="range" id="zoom" min="1" max="10" step="1" value="1" />
+
+              <label>Legend</label>
+              <span class="legend task">task</span>
+              <span class="legend pre_process">func / api call</span>
+              <span class="legend process">subprocess</span>
+              <span class="legend sh">remote process</span>
+          </div>
+      </div>
+      <div id="status" class="hide">
+      </div>
+      <div id="wrapper">
+          <div id="first"></div>
+          <div id="svg"></div>
+      </div>
+      <script src="https://code.jquery.com/jquery-3.1.1.js"
+              integrity="sha256-16cdPddA6VdVInumRGo6IbivbERE8p7CQR3HzTBuELA="
+              crossorigin="anonymous"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.4.0/d3.js"
+              integrity="sha256-IOnIx061QKBF2umT3sr/FYV/Pj504RsuFEWY5s3KL7Y="
+              crossorigin="anonymous"></script>
+      <script>
+// include "/reports/gantt.js.j2"
+
+{% include "/reports/gantt.js.j2" %}
+
+// end include "/reports/gantt.js.j2"
+      </script>
+  </body>
+</html>

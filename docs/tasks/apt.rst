@@ -1,0 +1,72 @@
+==================================================================
+:mod:`nuka.tasks.apt`
+==================================================================
+
+.. automodule:: nuka.tasks.apt
+
+
+nuka.tasks.apt.debconf_set_selections
+==================================================================
+
+.. autofunction:: debconf_set_selections
+
+
+Example:
+
+.. code-block:: python
+
+    res = await apt.debconf_set_selections(
+        [('adduser', 'adduser/homedir-permission', 'true')]
+    )
+    assert bool(res)
+
+
+
+nuka.tasks.apt.install
+==================================================================
+
+.. autofunction:: install
+
+
+Example:
+
+.. code-block:: python
+
+    res = await apt.install(['python'])
+    assert bool(res)
+
+
+
+nuka.tasks.apt.source
+==================================================================
+
+.. autofunction:: source
+
+
+Example:
+
+.. code-block:: python
+
+    res = await apt.source(
+        name='url',
+        key='https://deb.bearstech.com/bearstech-archive.gpg',
+        src='deb http://deb.bearstech.com/debian jessie-bearstech main',
+    )
+    assert bool(res)
+
+
+
+nuka.tasks.apt.update
+==================================================================
+
+.. autofunction:: update
+
+
+Example:
+
+.. code-block:: python
+
+    res = await apt.update(cache=3600)
+    assert bool(res)
+
+

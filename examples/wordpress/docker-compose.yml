@@ -1,0 +1,22 @@
+version: '2'
+services:
+    master:
+        image: bearstech/nukai:debian-jessie-python3
+        command: [bash, '-c', 'while true; do sleep 20; done']
+        expose:
+            - "3306"
+    slave:
+        image: bearstech/nukai:debian-jessie-python3
+        command: [bash, '-c', 'while true; do sleep 20; done']
+        expose:
+            - "3306"
+    web:
+        image: bearstech/nukai:debian-jessie-python3
+        command: [bash, '-c', 'while true; do sleep 20; done']
+        ports:
+            - "8888:80"
+        # does'nt really works and make container restart when the file change
+        #volumes:
+        #    - ${SSH_AUTH_SOCK}:/ssh-agent
+        #environment:
+        #    - SSH_AUTH_SOCK=/ssh-agent

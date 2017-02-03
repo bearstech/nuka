@@ -1,0 +1,214 @@
+/*global $, d3, window, document, host_datas */
+// vim:filetype=javascript
+
+var line_height = 20,
+    height = (host_datas.total_tasks + 1) * line_height,
+    tick = $('#tick'),
+    zoom = $('#zoom'),
+    host = null;
+
+// set an almost right value for tick
+if (host_datas.total_time < 30) {
+    tick.val("1");
+} else if (host_datas.total_time < 150) {
+    tick.val("5");
+} else if (host_datas.total_time < 300) {
+    tick.val("10");
+} else if (host_datas.total_time < 600) {
+    tick.val("30");
+} else {
+    tick.val("60");
+}
+
+var ts = d3.select('#status');
+
+// mouseover task / remote calls
+function mouseover(task, func, sh) {
+   ts.selectAll('table').remove();
+   var table = ts.append('table');
+   var tr = table.append('tr');
+   tr.append('td').text(task.filename + ':' + task.lineno);
+   tr.append('td').text('time');
+   tr.append('td').text('lat.');
+   tr = table.append('tr');
+   tr.append('td').append('b').html(task.name);
+   tr.append('td').append('b').text(task.time_str);
+   tr.append('td').text('');
+   task.funcs.forEach(function(f) {
+        var ftr = table.append('tr');
+        if (func && func.uid === f.uid) {
+            ftr.attr('class', f.type);
+        }
+        ftr.append('td').text(f.name);
+        ftr.append('td').text(f.time_str);
+        ftr.append('td').text(f.latency_str || '');
+        f.remote_calls.forEach(function(s) {
+            var str = table.append('tr');
+            if (sh && sh.uid === s.uid) {
+                str.attr('class', s.type);
+            }
+            str.append('td').text(s.name);
+            str.append('td').text(s.time_str);
+            str.append('td').text('');
+        });
+    });
+   ts.attr('class', 'show');
+   $('#first_' + task.uid).attr('class', 'show_line');
+   $('#line_' + task.uid).attr('class', 'show_line');
+}
+
+function mouseout(task) {
+   ts.attr('class', 'hide');
+   $('#first_' + task.uid).attr('class', 'hide_line');
+   $('#line_' + task.uid).attr('class', 'hide_line');
+}
+
+// change first collumn pos on scroll
+$(window).scroll(function() {
+    $('#first').css('left', window.scrollX + 'px');
+});
+
+// draw svg
+var svg = d3.select('#svg')
+    .append("svg")
+    .attr("class", "chart")
+    .attr("height", height)
+    .append("g")
+    .attr("class", "g-chart")
+    .attr("height", height);
+
+// draw line and rect
+function draw() {
+
+    var host_data = host_datas.hosts[$('#host').val()];
+
+    // remove elements
+    svg.selectAll('rect').remove();
+    svg.selectAll('line').remove();
+    svg.selectAll('text').remove();
+
+    // draw first collumn labels
+    d3.select('#first').selectAll('div').remove();
+    d3.select('#first')
+       .append('div')
+       .selectAll('#first')
+       .data(host_data.tasks).enter()
+       .append("div")
+       .style("height", function() {
+           return (line_height - 1) + 'px';
+       })
+       .text(function(d) { return d.short_name; })
+       .attr('id', function(d) { return 'first_' + d.uid; })
+       .on("mouseover", function(d) { return mouseover(d); } )
+       .on("mouseout", function(d) { return mouseout(d); });
+
+    // parameters
+    var i = 0,
+        tick_value = parseInt(tick.val(), 10),
+        coef = (($(window).width() - 220) / host_data.total_time) * parseInt(zoom.val(), 10);
+    coef = parseInt(coef, 10);
+
+    // draw lines rects
+    svg.selectAll('g')
+       .data(host_data.tasks).enter()
+       .append("rect")
+       .attr("x", 0)
+       .attr("y", function(d) { return d.row * line_height; })
+       .attr('width', host_datas.total_time * coef + 10)
+       .attr("height", function() { return line_height; })
+       .attr('id', function(d) { return 'line_' + d.uid; })
+       .attr('class', 'hide_line')
+       .on("mouseover", function(d) { return mouseover(d); } )
+       .on("mouseout", function(d) { return mouseout(d); });
+
+    svg.selectAll('g')
+       .data(host_data.tasks).enter()
+       .append("line")
+       .attr("x1", 0)
+       .attr("y1", function(d) { return (d.row * line_height) + line_height; })
+       .attr('x2', host_datas.total_time * coef + 10)
+       .attr("y2", function(d) { return (d.row * line_height) + line_height; });
+
+    // draw x grid
+    do {
+        svg
+            .append('line')
+            .attr('x1', i)
+            .attr('y1', 0)
+            .attr('x2', i)
+            .attr('y2', $('#first > div').height() + line_height);
+        svg
+            .append('text')
+            .attr('x', i + 2)
+            .attr('y', 10)
+            .attr('fill', 'black')
+            .text(parseInt(i / coef, 10) + 's');
+        i += tick_value * coef;
+    }
+    while (i < host_data.total_time * coef);
+
+    // draw tasks rects
+    svg.selectAll('g')
+       .data(host_data.tasks).enter()
+       .append("rect")
+       .attr("x", function(d) { return d.start * coef; })
+       .attr("y", function(d) { return d.row * line_height; })
+       .attr("height", line_height)
+       .attr("width", function(d) {return d.time * coef;})
+       .attr("class", function(d) {return d.type;})
+       .on("mouseover", function(d) { return mouseover(d); } )
+       .on("mouseout", function(d) { return mouseout(d); })
+       .attr('id', function(d) {
+            // funcs
+            svg.selectAll('g')
+               .data(d.funcs).enter()
+               .append("rect")
+               .attr("x", function(f) { return f.start * coef; })
+               .attr("y", function() { return d.row * line_height; })
+               .attr("height", line_height - 3)
+               .attr("width", function(f) { return f.time * coef; })
+               .attr("class", function(f) { return f.type; })
+               .on("mouseover", function(f) { return mouseover(d, f); } )
+               .on("mouseout", function() { return mouseout(d); })
+               .attr('id', function(f) {
+                   // remote calls
+                    svg.selectAll('g')
+                       .data(f.remote_calls).enter()
+                       .append("rect")
+                       .attr("x", function(s) { return s.start * coef; })
+                       .attr("y", function() { return d.row * line_height; })
+                       .attr("height", line_height - 10)
+                       .attr("width", function(s) { return s.time * coef; })
+                       .attr("class", function(s) { return s.type; })
+                       .on("mouseover", function(s) { return mouseover(d, f, s); } )
+                       .on("mouseout", function() { return mouseout(d); });
+               });
+
+       });
+
+
+    d3.select('svg').attr('width', host_datas.total_time * coef + 10);
+    svg.attr('width', host_datas.total_time * coef + 10);
+    $('#wrapper').css('width', host_datas.total_time * coef + 10);
+}
+
+// select
+Object.keys(host_datas.hosts).forEach(function(key) {
+    host = host_datas.hosts[key];
+    d3.select('#host')
+        .on('change', draw)
+        .append('option')
+        .attr('value', key)
+        .text(function() {
+            return key +
+                ' (tasks(' + host.tasks.length + ')' +
+                ' time(' + host.real_time_str + '))';
+                });
+});
+
+// redraw when zoom or tick change
+d3.select('#zoom').on('change', draw);
+d3.select('#tick').on('change', draw);
+
+// first draw
+draw();

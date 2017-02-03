@@ -1,0 +1,77 @@
+================================================
+nuka. provisionning tool focused on performance.
+================================================
+
+.. image:: https://travis-ci.org/bearstech/nuka.png?branch=master
+  :target: https://travis-ci.org/bearstech/nuka
+
+Because ops can dev.
+
+nuka is a provisionning tool focused on performance. It massively use asyncio
+and ssh. It's compatible with docker vagrant and apache-libcloud.
+
+Full documentation is available at http://doc.bearstech.com/nuka/
+
+
+Quickstart
+==========
+
+Install nuka::
+
+    $ pip install "nuka[full]"
+
+Then start a script::
+
+    #!/usr/bin/env python3.5
+    import nuka
+    from nuka.hosts import DockerContainer
+    from nuka.tasks import (shell, file)
+
+    # setup a docker container using the default image
+    host = DockerContainer('mycontainer')
+
+
+    async def do_something(host):
+
+        # we just echoing something using the shell.command task
+        await shell.command(['echo', 'it works'], host=host)
+
+        # if not host is provided, then a var named `host` is searched
+        # from the stack. Mean that this will works to
+        await shell.command(['echo', 'it works too'])
+
+
+    async def do_something_else(host):
+
+        # log /etc/resolv.conf content
+        res = await file.cat('/etc/resolv.conf')
+        host.log.info(res.content)
+
+
+    # those coroutines will run in parallell
+    nuka.run(
+        do_something(host),
+        do_something_else(host),
+    )
+
+Run it using::
+
+    $ chmod +x your_file.py
+    $ ./your_file.py -v
+
+The first run will be slow because we'll pull the docker image.
+The next run will take ~1s.
+
+Get some help::
+
+    $ ./your_file.py -h
+
+Look at the generated gantt of your deployement::
+
+    $ firefox .nuka/reports/your_file_gantt.html
+
+You'll get a dynamic report like this screenshot:
+
+.. image:: http://doc.bearstech.com/nuka/docs/_images/gantt.png
+   :align: center
+

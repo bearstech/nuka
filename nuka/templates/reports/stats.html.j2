@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+  <head>
+      <meta charset="utf8" />
+      <style>
+        body {
+          font: 12px sans-serif;
+        }
+        table {
+            border-collapse: collapse;
+        }
+        th, td {
+            border: thin solid #000;
+            padding: 3px;
+        }
+      </style>
+  </head>
+  <body>
+  {% for hostname, host_data in data['hosts'].items() %}
+      <h1>{{hostname}}</h1>
+      <table>
+          <tr>
+              <th>Name</th>
+              <th>Calls</th>
+              <th>Local Time</th>
+              <th>Avg. Local Time</th>
+              <th>Remote Time</th>
+              <th>Avg. Remote Time</th>
+          </tr>
+          {% for stat in host_data['stats'] %}
+              <tr>
+                  <td>{{ stat['name'] }}</td>
+                  <td>{{ stat['calls'] }}</td>
+                  <td>{{ stat['time'] }}</td>
+                  <td>{{ stat['avg_time'] }}</td>
+                  <td>{{ stat['remote_time'] }}</td>
+                  <td>{{ stat['avg_remote_time'] }}</td>
+              </tr>
+          {% endfor %}
+      </table>
+  {% endfor %}
+  </body>
+</html>
+
