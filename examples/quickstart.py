@@ -12,7 +12,7 @@ async def do_something(host):
     # we just echoing something using the shell.command task
     await shell.command(['echo', 'it works'], host=host)
 
-    # if not host is provided, then a var named `host` is searched
+    # if no host is provided, then a var named `host` is searched
     # from the stack. Mean that this will works to
     await shell.command(['echo', 'it works too'])
 
