@@ -2,6 +2,12 @@
 nuka - a provisioning tool
 ================================
 
+.. image::  https://img.shields.io/pypi/l/nuka.svg
+  :target: https://pypi.python.org/pypi/nuka
+
+.. image::  https://img.shields.io/pypi/pyversions/nuka.svg
+  :target: https://pypi.python.org/pypi/nuka
+
 .. image:: https://travis-ci.org/bearstech/nuka.png?branch=master
   :target: https://travis-ci.org/bearstech/nuka
 
