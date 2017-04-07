@@ -75,11 +75,11 @@ class rm(Task):
                     shutil.rmtree(dst)
                 else:
                     os.remove(dst)
-                return dict(rc=0)
+                return dict(rc=0, changed=True)
             except:
                 exc = self.format_exception()
                 return dict(rc=1, exc=exc)
-        return dict(rc=1)
+        return dict(rc=0, changed=False)
 
     def diff(self):
         dst = self.args['dst']
@@ -121,7 +121,12 @@ class put(Task):
                     self.render_template(fd)
                 else:
                     self.render_file(fd)
-            elif 'data' not in fd:
+            elif 'tpl' in fd:
+                src = fd['src'] = fd['tpl']
+                if src.startswith('~/'):
+                    fd['src'] = os.path.expanduser(src)
+                self.render_template(fd)
+            if 'data' not in fd:
                 raise RuntimeError('cant get content for fd {0}'.format(fd))
 
     def do(self):
