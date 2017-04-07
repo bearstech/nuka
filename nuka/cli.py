@@ -22,6 +22,7 @@ class Cli(argparse.ArgumentParser):
         self.add_argument('--verbose', '-v', action='count', default=0,
                           help='increase verbosity')
         self.add_argument('--tempdir', default=None)
+        self.add_argument('--nuka-dir', default='.nuka')
         self.add_argument('--debug', action='store_true', default=False,
                           help='enable asyncio debug')
         self.add_argument('--uvloop', action='store_true', default=False,

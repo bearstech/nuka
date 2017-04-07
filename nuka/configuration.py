@@ -37,7 +37,7 @@ class Config(dict):
                 self[k].update(v)
 
     def finalize(self, args):
-        nuka_dir = self['nuka_dir']
+        nuka_dir = self['nuka_dir'] = args.nuka_dir
         tempdir = args.tempdir or tempfile.mkdtemp(prefix='nuka')
         self['tmp'] = tempdir
         for dirname in (nuka_dir, tempdir):
