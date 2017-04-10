@@ -39,6 +39,18 @@ class restart(Task):
         return self.sh(['service', self.args['name'], 'restart'])
 
 
+class reload(Task):
+    """reload a service"""
+
+    diff = False
+
+    def __init__(self, name=None, **kwargs):
+        super(reload, self).__init__(name=name, **kwargs)
+
+    def do(self):
+        return self.sh(['service', self.args['name'], 'reload'])
+
+
 class stop(Task):
     """ensure a service is stoped"""
 

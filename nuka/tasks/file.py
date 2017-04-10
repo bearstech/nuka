@@ -6,6 +6,7 @@ from nuka.task import Task
 from nuka import utils
 import codecs
 import stat
+import glob
 import re
 import os
 
@@ -67,25 +68,29 @@ class rm(Task):
         super(rm, self).__init__(**kwargs)
 
     def do(self):
-        dst = self.args['dst']
-        if os.path.exists(dst):
-            try:
-                if os.path.isdir(dst):
-                    import shutil
-                    shutil.rmtree(dst)
-                else:
-                    os.remove(dst)
-                return dict(rc=0, changed=True)
-            except:
-                exc = self.format_exception()
-                return dict(rc=1, exc=exc)
-        return dict(rc=0, changed=False)
+        changed = False
+        for dst in glob.glob(self.args['dst']):
+            if os.path.exists(dst):
+                try:
+                    if os.path.isdir(dst):
+                        import shutil
+                        shutil.rmtree(dst)
+                    else:
+                        os.remove(dst)
+                    changed = True
+                except:
+                    exc = self.format_exception()
+                    return dict(rc=1, exc=exc)
+        return dict(rc=0, changed=changed)
 
     def diff(self):
-        dst = self.args['dst']
         diff = ''
-        if os.path.exists(dst):
-            res = self.lists_diff([dst + '\n'], [], fromfile=dst)
+        filenames = []
+        for dst in glob.glob(self.args['dst']):
+            if os.path.exists(dst):
+                filenames.append(dst + '\n')
+        if filenames:
+            res = self.lists_diff(filenames, [], fromfile=dst)
             diff = u''.join(res) + u'\n'
         return dict(rc=0, diff=diff)
 
@@ -93,15 +98,37 @@ class rm(Task):
 class chmod(Task):
     """apply chmod to dst"""
 
-    def __init__(self, dst=None, mod='644', **kwargs):
+    diff = False
+
+    def __init__(self, dst=None, mod='644', recursive=False, **kwargs):
         kwargs.setdefault('name', dst)
-        super(chmod, self).__init__(dst=dst, mod=mod, **kwargs)
+        super(chmod, self).__init__(dst=dst, mod=mod,
+                                    recursive=recursive, **kwargs)
 
     def do(self):
         dst = self.args['dst']
         mod = self.args['mod']
-        utils.chmod(dst, mod)
+        recursive = self.args['recursive']
+        utils.chmod(dst, mod, recursive=recursive)
         return dict(rc=0, dst=dst, mod=mod)
+
+
+class chown(Task):
+    """apply chown to dst"""
+
+    diff = False
+
+    def __init__(self, dst=None, own='root:root', recursive=False, **kwargs):
+        kwargs.setdefault('name', dst)
+        super(chown, self).__init__(dst=dst, own=own,
+                                    recursive=recursive, **kwargs)
+
+    def do(self):
+        dst = self.args['dst']
+        own = self.args['own']
+        recursive = self.args['recursive']
+        utils.chown(dst, own, recursive=recursive)
+        return dict(rc=0, dst=dst, own=own)
 
 
 class put(Task):

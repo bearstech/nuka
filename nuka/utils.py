@@ -89,17 +89,25 @@ def makedirs(dirname, mod=None, own=None):
     return dict(changed=changed)
 
 
-def chmod(dst, mod):
-    """chmod"""
+def chmod(dst, mod, recursive=False):
+    """chmod using command line"""
     if not os.path.exists(dst):
         raise OSError('{0} does not exist'.format(dst))
     if isinstance(mod, int):
+        if recursive:
+            raise RuntimeError()
         os.chmod(dst, mod)
     else:
-        if PY3:
-            os.chmod(dst, eval('0o' + mod))
-        else:
-            os.chmod(dst, eval('0' + mod))
+        cmd = ['chmod']
+        if recursive:
+            cmd.append('-R')
+        if isinstance(mod, (list, tuple)):
+            mod = '{0}:{1}'.format(*mod)
+        cmd.extend([mod, dst])
+        subprocess.check_call(cmd,
+                              stdin=subprocess.PIPE,
+                              stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE)
 
 
 def chown(dst, own, recursive=False):
@@ -109,9 +117,9 @@ def chown(dst, own, recursive=False):
     cmd = ['chown']
     if recursive:
         cmd.append('-R')
-    if isinstance(own, list, tuple):
+    if isinstance(own, (list, tuple)):
         own = '{0}:{1}'.format(*own)
-    cmd.append(own)
+    cmd.extend([own, dst])
     subprocess.check_call(cmd,
                           stdin=subprocess.PIPE,
                           stdout=subprocess.PIPE,
