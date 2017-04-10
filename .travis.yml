@@ -10,7 +10,9 @@ before_install:
   - sudo apt-get update
   - sudo apt-get install docker-engine
   - docker --version
+  - docker images
   - docker pull bearstech/nukai:$IMAGE
+  - docker images
 
 install:
   - pip install tox
