@@ -36,6 +36,8 @@ def session_container(request):
             command=['bash', '-c', 'while true; do sleep 1000000000000; done'],
         )
         loop.run_until_complete(wait_for_boot(h))
+    loop.run_until_complete(
+        h.run_command('rm -Rf /var/lib/apt/lists/'))
     # check if we can use coverage
     res = loop.run_until_complete(
         h.run_command('ls {remote_dir}/bin/coverage'.format(**nuka.config)))
