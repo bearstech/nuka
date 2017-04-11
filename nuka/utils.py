@@ -79,13 +79,17 @@ def default_watcher(delay=5):
 def makedirs(dirname, mod=None, own=None):
     """create directories. return ``{'changed': True|False}``"""
     changed = False
-    if not os.path.isdir(dirname):
-        os.makedirs(dirname)
-        changed = True
-    if mod:
-        chmod(dirname, mod)
-    if own:
-        chown(dirname, own)
+    fut = ''
+    dirname = dirname.rstrip('/')
+    for p in dirname.split('/'):
+        fut += p + '/'
+        if not os.path.isdir(fut):
+            os.makedirs(fut)
+            changed = True
+            if mod:
+                chmod(fut, mod)
+            if own:
+                chown(fut, own)
     return dict(changed=changed)
 
 

@@ -38,15 +38,16 @@ class exists(Task):
 class mkdir(Task):
     """create a directory"""
 
-    def __init__(self, dst=None, mod=None, **kwargs):
+    def __init__(self, dst=None, mod=None, own=None, **kwargs):
         kwargs.setdefault('name', dst)
-        kwargs.update(dst=dst, mod=mod)
+        kwargs.update(dst=dst, mod=mod, own=None)
         super(mkdir, self).__init__(**kwargs)
 
     def do(self):
         dst = self.args['dst']
         mod = self.args['mod']
-        res = utils.makedirs(dst, mod=mod)
+        own = self.args['mod']
+        res = utils.makedirs(dst, mod=mod, own=own)
         res.update(rc=0, dst=dst)
         return res
 
