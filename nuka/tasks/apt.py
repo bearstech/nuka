@@ -9,6 +9,8 @@ import codecs
 from nuka.tasks import http
 from nuka.task import Task
 
+GPG_HEADER = b'-----BEGIN PGP PUBLIC KEY BLOCK-----'
+
 
 class source(Task):
     """add an apt source"""
@@ -24,7 +26,15 @@ class source(Task):
                 dst = res['dst']
             else:
                 dst = key
-            self.sh(['apt-key', 'add', dst])
+            with open(dst, 'rb') as fd:
+                data = fd.read()
+            fname = '/etc/apt/trusted.gpg.d/{0}.gpg'.format(self.args['name'])
+            if GPG_HEADER in data:
+                self.sh('gpg --dearmor > {0}'.format(fname),
+                        shell=True, stdin=data)
+            else:
+                with open(fname, 'wb') as fd:
+                    fd.write(data)
         elif isinstance(key, tuple):
             keyserver, keyid = key
             self.sh([

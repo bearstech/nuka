@@ -11,10 +11,24 @@ pytestmark = [
 
 @pytest.mark.asyncio
 async def test_source_doc(host):
+    if 'wheezie' in host.hostname:
+        n = 'wheezie'
+    elif 'jessie' in host.hostname:
+        n = 'jessie'
+    else:
+        n = 'stretch'
+    src = 'deb http://apt.dockerproject.org/repo/ debian-{0} main'.format(n)
     res = await apt.source(
-        name='url',
+        name='docker',
+        key='https://yum.dockerproject.org/gpg',
+        src=src,
+    )
+    assert bool(res)
+    src = 'deb http://deb.bearstech.com/debian {0}-bearstech main'.format(n)
+    res = await apt.source(
+        name='bearstech',
         key='https://deb.bearstech.com/bearstech-archive.gpg',
-        src='deb http://deb.bearstech.com/debian jessie-bearstech main',
+        src=src,
     )
     assert bool(res)
 
