@@ -141,11 +141,13 @@ class put(Task):
 
     def pre_process(self):
         for fd in self.args['files']:
-            if 'src' in fd:
+            if 'linkto' in fd:
+                fd['data'] = None
+            elif 'src' in fd:
                 src = fd['src']
                 if src.startswith('~/'):
                     fd['src'] = os.path.expanduser(src)
-                if src.endswith('.j2'):
+                elif src.endswith('.j2'):
                     self.render_template(fd)
                 else:
                     self.render_file(fd)
@@ -164,19 +166,30 @@ class put(Task):
             dst = fd['dst']
             if dst.startswith('~/'):
                 dst = fd['dst'] = os.path.expanduser(dst)
-            data = fd['data']
-            if os.path.exists(dst):
-                with codecs.open(dst, 'rb', 'utf8') as fd_:
-                    if data != fd_.read():
-                        files_changed.append(dst)
+            if 'linkto' in fd:
+                link = fd['linkto']
+                if os.path.exists(link):
+                    if os.path.realpath(dst) != os.path.realpath(link):
+                        os.remove(link)
+                if not os.path.islink(dst):
+                    os.symlink(link, dst)
+                    files_changed.append(dst)
             else:
-                files_changed.append(dst)
-            with codecs.open(dst, 'wb', 'utf8') as fd_:
-                fd_.write(data)
+                data = fd['data']
+                if os.path.exists(dst):
+                    with codecs.open(dst, 'rb', 'utf8') as fd_:
+                        if data != fd_.read():
+                            files_changed.append(dst)
+                else:
+                    files_changed.append(dst)
+                with codecs.open(dst, 'wb', 'utf8') as fd_:
+                    fd_.write(data)
             mod = fd.get('mod')
             if mod is None and fd.get('executable'):
                 st = os.stat(dst)
-                mod = st.st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH
+                mod = (
+                    st.st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH
+                )
             if mod is not None:
                 utils.chmod(dst, mod)
         return dict(rc=0, changed=files_changed)
@@ -186,12 +199,19 @@ class put(Task):
         files = self.args['files'] or []
         for fd in files:
             dst = fd['dst']
-            new_text = fd['data']
-            if not os.path.isfile(dst):
-                old_text = ''
+            if 'linkto' in fd:
+                new_text = fd['linkto']
+                if not os.path.isfile(dst):
+                    old_text = ''
+                else:
+                    old_text = os.path.realpath(dst)
             else:
-                with codecs.open(dst, 'rb', 'utf8') as fd_:
-                    old_text = fd_.read()
+                new_text = fd['data']
+                if not os.path.isfile(dst):
+                    old_text = ''
+                else:
+                    with codecs.open(dst, 'rb', 'utf8') as fd_:
+                        old_text = fd_.read()
             diff += self.texts_diff(old_text, new_text, fromfile=dst)
         return dict(rc=0, diff=diff)
 
