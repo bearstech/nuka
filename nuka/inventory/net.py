@@ -95,7 +95,7 @@ def update_inventory(inventory):
     result = libc.getifaddrs(pointer(ifap))
     if result != 0:
         raise RuntimeError(get_errno())
-    families = {e.value: e.name for e in socket.AddressFamily}
+    families = {2: 'AF_INET', 10: 'AF_INET6'}
     ifaces = inventory['ifaces'] = {}
     try:
         for ifa in iter_ifaps(ifap):
@@ -103,7 +103,7 @@ def update_inventory(inventory):
             if name == 'lo':
                 continue
             d = ifaces.setdefault(name, {
-                'index': socket.if_nametoindex(name),
+                'index': libc.if_nametoindex(name),
                 'primary': False,
             })
             for family, addr in getinfos(ifa):
