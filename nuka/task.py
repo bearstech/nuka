@@ -392,7 +392,11 @@ class boot(SetupTask):
 
     async def run(self):
         # wait for boot async
-        await self.host.boot()
+        try:
+            await self.host.boot()
+        except:
+            self.host.log.exception('boot')
+            import pdb;pdb.set_trace()
         self.meta['start'] = self.host._start
 
 

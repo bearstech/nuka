@@ -11,10 +11,16 @@ from libcloud.common.google import ResourceNotFoundError
 from libcloud.compute.providers import get_driver
 from libcloud.compute.types import Provider
 
+from novaclient.client import Client as NovaClient
+from novaclient.exceptions import NotFound
+
 from nuka.task import get_task_from_stack
 from nuka.hosts import base
 from nuka import utils
 import nuka
+
+
+nova_providers = (Provider.OVH, Provider.OPENSTACK)
 
 
 _drivers = defaultdict(dict)
@@ -25,7 +31,10 @@ def driver_from_config(provider):
     ident = threading.get_ident()
     driver = _drivers[provider].get(ident)
     if driver is None:
-        klass = get_driver(provider)
+        if provider in nova_providers:
+            klass = NovaClient
+        else:
+            klass = get_driver(provider)
         args = nuka.config[provider.lower()]['driver']
         if isinstance(args, str):
             # load arguments from file
@@ -64,7 +73,11 @@ class Host(base.Host):
             self.cancel()
             raise
         else:
-            self.hostname = self.node.public_ips[0]
+            self.hostname = self.public_ip
+
+    @property
+    def public_ip(self):
+        return self.node.public_ips[0]
 
     @property
     def private_ip(self):
@@ -82,8 +95,11 @@ class Host(base.Host):
 
             start = time.time()
             try:
-                self._node = driver.ex_get_node(self.hostname)
-            except ResourceNotFoundError:
+                if self.provider in nova_providers:
+                    self._node = driver.servers.find(name=self.hostname)
+                else:
+                    self._node = driver.ex_get_node(self.hostname)
+            except (ResourceNotFoundError, NotFound):
                 self.add_time(start=start, type='api_call', task=task,
                               name='driver.ex_get_node()')
                 if create:
@@ -92,7 +108,10 @@ class Host(base.Host):
                     args = self.get_create_node_args(driver=driver, task=task)
                     args['name'] = self.name
                     start = time.time()
-                    self._node = driver.create_node(**args)
+                    if self.provider in nova_providers:
+                        self._node = driver.servers.create(**args)
+                    else:
+                        self._node = driver.create_node(**args)
                     self.log.warn('Node {0} created'.format(self))
                     self.add_time(start=start, type='api_call', task=task,
                                   name='driver.ex_create_node()')
@@ -155,6 +174,55 @@ class GCEHost(Host):
         return node_args
 
 
+class OpenstackHost(Host):
+    """Host on OpenStack"""
+
+    use_sudo = True
+    provider = Provider.OPENSTACK
+
+    @property
+    def public_ip(self):
+        for iface in self.node.interface_list():
+            for addr in iface.fixed_ips:
+                ip = addr['ip_address']
+                if ':' not in ip:
+                    return ip
+
+    @property
+    def private_ip(self):
+        raise NotImplementedError()
+
+    def get_create_node_args(self, driver=None, task=None):
+        node_args = super().get_create_node_args(driver=driver, task=task)
+
+        # update ex_metadata ssh keys
+        keys_list = nuka.config.get('ssh', {}).get('keys') or []
+        keysfile = nuka.config.get('ssh', {}).get('keysfile')
+        if keysfile:
+            with codecs.open(os.path.expanduser(keysfile), 'r', 'utf8') as fd:
+                for line in fd:
+                    keys_list.append(line.strip())
+        if keys_list:
+            node_args.setdefault('ex_metadata', {})
+            items = node_args['ex_metadata'].setdefault('items', [])
+            if not [v for v in items if v["key"] == "sshKeys"]:
+                keys = []
+                for line in keys_list:
+                    if ':' in line:
+                        keys.append(line)
+                    else:
+                        keys.append(self.vars['user'] + ':' + line)
+                keys = '\n'.join(keys)
+                items.append({"value": keys, "key": "sshKeys"})
+
+        self.log.debug4(nuka.utils.json.dumps(node_args, indent=2))
+        if 'flavor' in node_args:
+            node_args['flavor'] = driver.flavors.find(name=node_args['flavor'])
+        if 'image' in node_args:
+            node_args['image'] = driver.glance.find_image(node_args['image'])
+        return node_args
+
+
 class Cloud(base.HostGroup):
     """A HostGroup of cloud hosts"""
 
@@ -162,7 +230,9 @@ class Cloud(base.HostGroup):
     _nodes = {}
 
     host_classes = {
-        Provider.GCE: GCEHost
+        Provider.GCE: GCEHost,
+        Provider.OPENSTACK: OpenstackHost,
+        Provider.OVH: OpenstackHost,
     }
 
     def __init__(self, provider=Provider.GCE, use_sudo=False):
@@ -183,7 +253,10 @@ class Cloud(base.HostGroup):
         if not cls._nodes.get(self.provider):
             cls._list_lock.acquire()
             if not cls._nodes.get(self.provider):
-                cls._nodes[self.provider] = self.driver.list_nodes()
+                if self.provider in nova_providers:
+                    cls._nodes[self.provider] = self.driver.servers.list()
+                else:
+                    cls._nodes[self.provider] = self.driver.list_nodes()
             cls._list_lock.release()
         return cls._nodes[self.provider]
 
@@ -226,7 +299,11 @@ class Cloud(base.HostGroup):
                 self[node.name].log.info('destroy()')
                 del self[node.name]
         if nodes:
-            self.driver.ex_destroy_multiple_nodes(nodes)
+            if self.provider in nova_providers:
+                for node in nodes:
+                    node.force_delete()
+            else:
+                self.driver.ex_destroy_multiple_nodes(nodes)
 
 
 def get_cloud(provider=Provider.GCE):

@@ -1,3 +1,9 @@
+openstack:
+    driver: ~/.ovh/nuka.json
+    create_node_args:
+       flavor: s1-2
+       image: Debian 8
+
 gce:
     user: bear
     driver: ~/.gce/nuka.json

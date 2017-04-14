@@ -8,11 +8,14 @@ import mysql
 
 
 nuka.cli.add_argument('--gce', action='store_true', default=False)
+nuka.cli.add_argument('--ovh', action='store_true', default=False)
 nuka.cli.add_argument('--destroy', action='store_true', default=False)
 nuka.cli.parse_args()
 
 
-if nuka.cli.args.gce:
+if nuka.cli.args.ovh:
+    all_hosts = Cloud(Provider.OPENSTACK).from_compose()
+elif nuka.cli.args.gce:
     all_hosts = Cloud(Provider.GCE).from_compose()
 else:
     all_hosts = DockerCompose()
