@@ -11,7 +11,7 @@ def read(*rnames):
 
 
 docker = ['docker-compose']
-cloud = ['apache-libcloud', 'PyCrypto']
+cloud = ['novaclient', 'apache-libcloud', 'PyCrypto']
 test = ['pytest', 'pytest-asyncio', 'coverage']
 full = ['ujson'] + docker + cloud + test
 
