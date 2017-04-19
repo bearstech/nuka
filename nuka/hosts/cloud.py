@@ -20,7 +20,7 @@ from nuka import utils
 import nuka
 
 
-nova_providers = (Provider.OVH, Provider.OPENSTACK)
+nova_providers = (Provider.OPENSTACK,)
 
 
 _drivers = defaultdict(dict)
@@ -203,18 +203,14 @@ class OpenstackHost(Host):
                 for line in fd:
                     keys_list.append(line.strip())
         if keys_list:
-            node_args.setdefault('ex_metadata', {})
-            items = node_args['ex_metadata'].setdefault('items', [])
-            if not [v for v in items if v["key"] == "sshKeys"]:
-                keys = []
-                for line in keys_list:
-                    if ':' in line:
-                        keys.append(line)
-                    else:
-                        keys.append(self.vars['user'] + ':' + line)
-                keys = '\n'.join(keys)
-                items.append({"value": keys, "key": "sshKeys"})
-
+            driver = driver_from_config(self.provider)
+            keypairs = [k for k in driver.keypairs.list() if k.name == 'ops']
+            if not keypairs:
+                driver.keypairs.create(
+                    name='ops',
+                    public_key='\n'.join(keys_list),
+                )
+            node_args['key_name'] = 'ops'
         self.log.debug4(nuka.utils.json.dumps(node_args, indent=2))
         if 'flavor' in node_args:
             node_args['flavor'] = driver.flavors.find(name=node_args['flavor'])
@@ -232,7 +228,6 @@ class Cloud(base.HostGroup):
     host_classes = {
         Provider.GCE: GCEHost,
         Provider.OPENSTACK: OpenstackHost,
-        Provider.OVH: OpenstackHost,
     }
 
     def __init__(self, provider=Provider.GCE, use_sudo=False):
@@ -297,13 +292,21 @@ class Cloud(base.HostGroup):
             if node.name in self:
                 nodes.append(node)
                 self[node.name].log.info('destroy()')
-                del self[node.name]
         if nodes:
             if self.provider in nova_providers:
                 for node in nodes:
-                    node.force_delete()
+                    try:
+                        node.force_delete()
+                    except:
+                        if node.name in self:
+                            host = self[node.name]
+                            host.log.exception('destroy()')
+                        else:
+                            raise
+
             else:
                 self.driver.ex_destroy_multiple_nodes(nodes)
+            del self[node.name]
 
 
 def get_cloud(provider=Provider.GCE):
