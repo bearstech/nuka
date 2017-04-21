@@ -48,6 +48,7 @@ else:
 
 try:
     import libcloud  # NOQA
+    import novaclient # NOQA
 except ImportError:  # pragma: no cover
     # licloud is not available
     pass

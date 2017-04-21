@@ -8,6 +8,7 @@ class Cli(argparse.ArgumentParser):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.finalized = False
         self.args = None
         self.add_argument(
             '--help', '-h', action='store_true',
@@ -32,8 +33,12 @@ class Cli(argparse.ArgumentParser):
         self.add_argument('--uvloop', action='store_true', default=False,
                           help='use uvloop as eventloop')
 
-    def parse_args(self, argv=None):
-        self.args = super().parse_args(argv)
+    def parse_known_args(self, *args, **kwargs):
+        self.args, argv = super().parse_known_args(*args, **kwargs)
+        return self.args, argv
+
+    def parse_args(self, *args, **kwargs):
+        self.args = super().parse_args(*args, **kwargs)
         if self.args.help:
             self.print_help()
             # Ignore warnings like:
@@ -44,6 +49,7 @@ class Cli(argparse.ArgumentParser):
         if self.args.config:
             config.update_from_file(self.args.config)
         config.finalize(self.args)
+        self.finalized = True
 
 
 cli = Cli(add_help=False)

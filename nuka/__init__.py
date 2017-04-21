@@ -139,6 +139,7 @@ def run(*coros, timeout=None):
                 pass
             elif isinstance(res, Exception):
                 raise res
+        return results
 
 
 def on_sigint(*args, **kwargs):
@@ -168,7 +169,7 @@ def on_sigint(*args, **kwargs):
 
 
 def on_exit():
-    if not cli.args.help:
+    if cli.finalized and not cli.args.help:
         if 'all_hosts' in config and 'remote_dir' in config:
             hosts = config['all_hosts'].values()
             hosts = [h for h in hosts if h._tasks]
