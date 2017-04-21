@@ -33,13 +33,33 @@ def driver_from_config(provider):
     if driver is None:
         if provider in nova_providers:
             klass = NovaClient
+            env_keys = (
+                'OS_USERNAME', 'OS_PASSWORD',
+                'OS_PROJECT_NAME', 'OS_PROJECT_ID',
+                'OS_TENANT_NAME', 'OS_TENANT_ID',
+                'OS_REGION_NAME',
+            )
         else:
             klass = get_driver(provider)
-        args = nuka.config[provider.lower()]['driver']
+            env_keys = ()
+
+        args = nuka.config[provider.lower()].get('driver', {}) or {}
         if isinstance(args, str):
             # load arguments from file
             with open(os.path.expanduser(args)) as fd:
                 args = utils.json.load(fd)
+
+        for k in env_keys:
+            if k in os.environ:
+                v = os.environ[k]
+                k = k[3:].lower()
+                k = k.replace('tenant', 'project')
+                args[k] = v
+        if not args:
+            raise RuntimeError((
+                'Not able to get the driver configuration for {} provider.'
+            ).format(provider))
+
         driver = klass(**args)
         _drivers[ident] = driver
     return driver
