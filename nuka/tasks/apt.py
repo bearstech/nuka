@@ -133,9 +133,12 @@ class install(Task):
     }
 
     def __init__(self, packages=None, debconf=None,
+                 debian_frontend='noninteractive', debian_priority=None,
                  update_cache=None, **kwargs):
         kwargs.setdefault('name', ', '.join(packages or []))
         kwargs.update(packages=packages, debconf=debconf,
+                      debian_priority=debian_priority,
+                      debian_frontend=debian_frontend,
                       update_cache=update_cache)
         super(install, self).__init__(**kwargs)
 
@@ -177,7 +180,12 @@ class install(Task):
                             v = conf
                         stdin = ' '.join([p] + c + [v])
                         self.sh(['debconf-set-selections'], stdin=stdin)
-            res = self.sh(['apt-get', 'install', '-qqy'] + packages)
+            env = {}
+            for k in ('debian_priority', 'debian_frontend'):
+                v = self.args.get(k)
+                if v:
+                    env[k.upper()] = v
+            res = self.sh(['apt-get', 'install', '-qqy'] + packages, env=env)
         else:
             res = dict(rc=0)
         res['changed'] = to_install
