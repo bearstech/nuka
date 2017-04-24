@@ -25,6 +25,23 @@ nova_providers = (Provider.OPENSTACK,)
 
 _drivers = defaultdict(dict)
 
+_env_keys = {
+    Provider.GCE: (
+        ('GCE_EMAIL', 'user_id'),
+        ('GCE_PEM_FILE_PATH', 'key'),
+        ('GCE_PROJECT', 'project'),
+    ),
+    Provider.OPENSTACK: (
+        ('OS_USERNAME', 'username'),
+        ('OS_PASSWORD', 'password'),
+        ('OS_PROJECT_NAME', 'project_name'),
+        ('OS_PROJECT_ID', 'project_id'),
+        ('OS_TENANT_NAME', 'project_name'),
+        ('OS_TENANT_ID', 'project_id'),
+        ('OS_REGION_NAME', 'region_name'),
+    )
+}
+
 
 def driver_from_config(provider):
     # cache one driver per thread. probably only usefull for main thread
@@ -33,15 +50,8 @@ def driver_from_config(provider):
     if driver is None:
         if provider in nova_providers:
             klass = NovaClient
-            env_keys = (
-                'OS_USERNAME', 'OS_PASSWORD',
-                'OS_PROJECT_NAME', 'OS_PROJECT_ID',
-                'OS_TENANT_NAME', 'OS_TENANT_ID',
-                'OS_REGION_NAME',
-            )
         else:
             klass = get_driver(provider)
-            env_keys = ()
 
         args = nuka.config[provider.lower()].get('driver', {}) or {}
         if isinstance(args, str):
@@ -49,12 +59,10 @@ def driver_from_config(provider):
             with open(os.path.expanduser(args)) as fd:
                 args = utils.json.load(fd)
 
-        for k in env_keys:
+        for k, new_k in _env_keys.get(provider, ()):
             if k in os.environ:
                 v = os.environ[k]
-                k = k[3:].lower()
-                k = k.replace('tenant', 'project')
-                args[k] = v
+                args[new_k] = v
         if not args:
             raise RuntimeError((
                 'Not able to get the driver configuration for {} provider.'
@@ -129,7 +137,25 @@ class Host(base.Host):
                     args['name'] = self.name
                     start = time.time()
                     if self.provider in nova_providers:
-                        self._node = driver.servers.create(**args)
+                        node = driver.servers.create(**args)
+                        # it take at least 20s to boot a vm
+                        time.sleep(20)
+                        wait = 15
+                        while node.status not in ('ACTIVE',):
+                            print(node.is_loaded(), node.status)
+                            try:
+                                node = driver.servers.find(name=self.hostname)
+                            except NotFound:
+                                pass
+                            if node.status in ('ACTIVE',):
+                                # final wait
+                                time.sleep(3)
+                                break
+                            else:
+                                wait = (wait - 5) or 2
+                                time.sleep(wait)
+                        self._node = node
+                        print(self._node.status)
                     else:
                         self._node = driver.create_node(**args)
                     self.log.warn('Node {0} created'.format(self))

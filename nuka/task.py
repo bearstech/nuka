@@ -396,7 +396,6 @@ class boot(SetupTask):
             await self.host.boot()
         except:
             self.host.log.exception('boot')
-            import pdb;pdb.set_trace()
         self.meta['start'] = self.host._start
 
 
@@ -441,13 +440,27 @@ class setup(SetupTask):
         if mods:
             cmd += ' ' + ' '.join(['--inventory=' + m for m in mods])
 
-        proc = await self.host.create_process(cmd, task=self)
         stdin = remote.build_archive(extra_classes=all_task_classes())
         host.log.debug(
             'Uploading archive ({0}kb)...'.format(int(len(stdin) / 1000)))
-        proc.stdin.write(stdin)
-        await proc.stdin.drain()
-        res = await proc.next_message()
+        retries = 10
+        for i in range(1, retries + 2):
+            try:
+                proc = await self.host.create_process(cmd, task=self)
+                proc.stdin.write(stdin)
+                await proc.stdin.drain()
+                res = await proc.next_message()
+            except OSError:
+                if i == retries:
+                    self.host.log.exception('setup')
+                    raise
+                else:
+                    self.host.log.warn(
+                        'Host not available. Retry %s/%s in 3s...', i, retries)
+                    time.sleep(3)
+            except:
+                self.host.log.exception('setup')
+                raise
         self.res.update(res)
         host.vars['inventory'] = self.res['inventory']
         host.log.debug(
