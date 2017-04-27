@@ -461,6 +461,8 @@ class setup(SetupTask):
             except:
                 self.host.log.exception('setup')
                 raise
+            else:
+                break
         self.res.update(res)
         host.vars['inventory'] = self.res['inventory']
         host.log.debug(

@@ -134,11 +134,11 @@ def run(*coros, timeout=None):
     except Exception:
         raise asyncio.CancelledError()
     else:
-        for i, res in enumerate(results):
+        for res in results:
             if isinstance(res, asyncio.CancelledError):
-                pass
+                sys.exit(1)
             elif isinstance(res, Exception):
-                raise res
+                raise
         return results
 
 
