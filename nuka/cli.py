@@ -26,7 +26,7 @@ class Cli(argparse.ArgumentParser):
             '--tempdir', default=None,
             help='tempdir name to store file localy and remotly')
         self.add_argument(
-            '--nuka-dir', default='.nuka',
+            '--nuka-dir', default=None,
             help='directory to store logs & reports. Default: .nuka')
         self.add_argument('--debug', action='store_true', default=False,
                           help='enable asyncio debug')

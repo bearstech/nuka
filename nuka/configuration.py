@@ -33,11 +33,16 @@ class Config(dict):
     def update_from_file(self, yaml_config):  # pragma: no cover
         for doc in yaml.load_all(yaml_config):
             for k, v in doc.items():
-                self.setdefault(k, v)
-                self[k].update(v)
+                if isinstance(v, dict):
+                    self.setdefault(k, v)
+                    self[k].update(v)
+                else:
+                    self[k] = v
 
     def finalize(self, args):
-        nuka_dir = self['nuka_dir'] = args.nuka_dir
+        if args.nuka_dir:
+            self['nuka_dir'] = args.nuka_dir
+        nuka_dir = self['nuka_dir']
         tempdir = args.tempdir or tempfile.mkdtemp(prefix='nuka')
         self['tmp'] = tempdir
         for dirname in (nuka_dir, tempdir):
