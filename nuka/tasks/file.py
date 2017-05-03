@@ -4,6 +4,7 @@ file related tasks
 """
 from nuka.task import Task
 from nuka import utils
+import logging
 import codecs
 import stat
 import glob
@@ -171,6 +172,11 @@ class put(Task):
                 if os.path.exists(link):
                     if os.path.realpath(dst) != os.path.realpath(link):
                         os.remove(link)
+                else:
+                    self.send_log((
+                        'Invalid link destination for '
+                        '{0[dst]} -> no such file {0[linkto]}'
+                        ).format(fd), level=logging.ERROR)
                 if not os.path.islink(dst):
                     os.symlink(link, dst)
                     files_changed.append(dst)
@@ -200,11 +206,20 @@ class put(Task):
         for fd in files:
             dst = fd['dst']
             if 'linkto' in fd:
-                new_text = fd['linkto']
+                if os.path.exists(fd['linkto']):
+                    new_text = '{0[dst]} -> {0[linkto]}\n'.format(fd)
+                else:
+                    new_text = (
+                        '{0[dst]} -> no such file {0[linkto]}\n'
+                    ).format(fd)
+                    self.send_log((
+                        'Invalid link destination for {0}'
+                        ).format(new_text.strip()),
+                        level=logging.ERROR)
                 if not os.path.isfile(dst):
                     old_text = ''
                 else:
-                    old_text = os.path.realpath(dst)
+                    old_text = new_text
             else:
                 new_text = fd['data']
                 if not os.path.isfile(dst):
