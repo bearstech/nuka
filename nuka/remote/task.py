@@ -123,7 +123,7 @@ class Task(RemoteTask):
 
     @classmethod
     def sh(self, args, stdin=b'', shell=False, env=None, check=True,
-           watcher=None):
+           watcher=None, short_args=None, stdout=None, stderr=None):
         """run a shell command"""
         start = time.time()
         env_ = os.environ.copy()
@@ -131,6 +131,10 @@ class Task(RemoteTask):
         if env:
             env_.update(env)
         kwargs = dict(self.stds, shell=shell)
+        if stdout is not None:
+            kwargs['stdout'] = stdout
+        if stderr is not None:
+            kwargs['stderr'] = stderr
         res = {'stdout': '', 'stderr': ''}
         try:
             p = subprocess.Popen(args, env=env_, **kwargs)
@@ -138,7 +142,7 @@ class Task(RemoteTask):
             rc = res['rc'] = 1
             exc = self.format_exception()
         else:
-            self.current_cmd = args
+            self.current_cmd = short_args or args
             self.current_process = p
             if watcher is not None:
                 self.current_process_watcher = safe_iterator(watcher(self, p))
@@ -150,9 +154,17 @@ class Task(RemoteTask):
             self.current_process = None
             utils._next(self.current_process_watcher)
             self.current_process_watcher = None
-            self.current_process_watcher = None
+            if stdout is None:
+                stdout = kwargs['stdout']
+                with open(stdout.name) as fd:
+                    stdout = fd.read()
             if isinstance(stdout, bytes):
                 stdout = stdout.decode('utf8')
+            if stderr is None:
+                stderr = kwargs['stderr']
+                with open(stderr.name) as fd:
+                    stderr = fd.read()
+            if isinstance(stderr, bytes):
                 stderr = stderr.decode('utf8')
             rc = p.returncode
             res.update(rc=rc, stdout=stdout, stderr=stderr)

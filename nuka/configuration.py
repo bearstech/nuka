@@ -26,6 +26,8 @@ LOG = 60
 logging.addLevelName(LOG, 'LOG')
 CHANGED = logging.WARNING + 1
 logging.addLevelName(CHANGED, 'CHANGED')
+PROGRESS = logging.WARNING + 2
+logging.addLevelName(PROGRESS, 'PROGRESS')
 
 
 class Config(dict):
