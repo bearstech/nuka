@@ -222,7 +222,8 @@ class Task(Base, RemoteTask):
         if self.host.cancelled():
             self.cancel()
         else:
-            if nuka.cli.args.diff:
+            diff_mode = self.args.get('diff_mode', nuka.cli.args.diff)
+            if diff_mode:
                 # ignore diff call if the task do not support it
                 attr = getattr(self, 'diff', None)
                 if attr in (None, False):
@@ -248,7 +249,7 @@ class Task(Base, RemoteTask):
         """
 
         self.host.log.debug(self)
-        diff_mode = nuka.cli.args.diff
+        diff_mode = self.args.get('diff_mode', nuka.cli.args.diff)
         klass = self.__class__
 
         args = {}
