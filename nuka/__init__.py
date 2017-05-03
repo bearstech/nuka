@@ -138,7 +138,7 @@ def run(*coros, timeout=None):
             if isinstance(res, asyncio.CancelledError):
                 sys.exit(1)
             elif isinstance(res, Exception):
-                raise
+                raise res
         return results
 
 
