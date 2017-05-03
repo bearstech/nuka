@@ -227,7 +227,7 @@ class Task(RemoteTask):
             return self.current_process.pid == process.pid
 
     @classmethod
-    def send_progress(self, value, level=logging.DEBUG):
+    def send_progress(self, value, level=utils.PROGRESS):
         """send progression of the current remote process to the client"""
         if self.current_process is not None:
             p = self.current_process

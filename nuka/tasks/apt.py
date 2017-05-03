@@ -5,11 +5,11 @@ apt related tasks
 import os
 import time
 import codecs
-import logging
 import tempfile
 
 from nuka.tasks import http
 from nuka.task import Task
+
 
 GPG_HEADER = b'-----BEGIN PGP PUBLIC KEY BLOCK-----'
 
@@ -33,9 +33,7 @@ def apt_watcher(delay, fd):
                             if line != last_sent:
                                 last_sent = line
                                 inc += delay
-                                task.send_progress(
-                                    line,
-                                    level=logging.WARNING + 2)
+                                task.send_progress(line)
                 yield
             else:
                 # process is dead

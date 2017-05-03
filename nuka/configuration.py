@@ -14,7 +14,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with nuka. If not, see <http://www.gnu.org/licenses/>.
-
 import tempfile
 import logging
 import os
@@ -22,12 +21,7 @@ import os
 import jinja2
 import yaml
 
-LOG = 60
-logging.addLevelName(LOG, 'LOG')
-CHANGED = logging.WARNING + 1
-logging.addLevelName(CHANGED, 'CHANGED')
-PROGRESS = logging.WARNING + 2
-logging.addLevelName(PROGRESS, 'PROGRESS')
+from nuka.utils import CHANGED
 
 
 class Config(dict):

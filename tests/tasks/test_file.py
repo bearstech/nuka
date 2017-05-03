@@ -124,7 +124,7 @@ async def test_template(host):
     assert bool(res)
     for i in range(0, 2):
         res = await file.cat('/tmp/xx{0}'.format(i))
-        assert res.content == 'yo dude'
+        assert res.content == 'yo dude\n'
 
 
 @pytest.mark.asyncio

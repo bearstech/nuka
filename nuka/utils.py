@@ -57,6 +57,14 @@ except ImportError:
     from io import StringIO  # NOQA
 
 
+LOG = 60
+logging.addLevelName(LOG, 'LOG')
+CHANGED = logging.WARNING + 1
+logging.addLevelName(CHANGED, 'CHANGED')
+PROGRESS = logging.WARNING + 2
+logging.addLevelName(PROGRESS, 'PROGRESS')
+
+
 def default_watcher(delay=5):
     def watcher(task, process):
         start = time.time()
