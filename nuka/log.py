@@ -20,8 +20,8 @@ import sys
 import os
 
 import nuka
-from nuka.configuration import LOG
-from nuka.configuration import CHANGED
+from nuka.utils import LOG
+from nuka.utils import CHANGED
 
 
 class HostLogger(logging.Logger):
