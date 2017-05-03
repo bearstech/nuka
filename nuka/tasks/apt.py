@@ -44,7 +44,7 @@ class source(Task):
 
     def do(self):
         name = self.args['name']
-        src = self.args['src']
+        src = self.args['src'].strip()
         src += '\n'
         dst = os.path.join('/etc/apt/sources.list.d', name + '.list')
         changed = True
@@ -67,6 +67,19 @@ class source(Task):
                 ]
                 self.sh(cmd)
         return dict(rc=0, changed=changed)
+
+    def diff(self):
+        name = self.args['name']
+        src = self.args['src'].strip()
+        src += '\n'
+        dst = os.path.join('/etc/apt/sources.list.d', name + '.list')
+        with codecs.open(dst, 'r', 'utf8') as fd:
+            old_data = fd.read()
+        if old_data != src:
+            diff = self.texts_diff(old_data, src, fromfile=dst)
+        else:
+            diff = u''
+        return dict(rc=0, diff=diff)
 
 
 class update(Task):
@@ -185,7 +198,10 @@ class install(Task):
                 v = self.args.get(k)
                 if v:
                     env[k.upper()] = v
-            res = self.sh(['apt-get', 'install', '-qqy'] + packages, env=env)
+            res = self.sh([
+                'apt-get', 'install', '-qqy',
+                '-oDpkg::Options::=--force-confold',
+            ] + packages, env=env)
         else:
             res = dict(rc=0)
         res['changed'] = to_install
@@ -194,7 +210,7 @@ class install(Task):
     def diff(self):
         packages = self.args['packages']
         installed = self.dpkg_list(packages)
-        installed = [p + '\n' for p in sorted(installed)]
-        packages = [p + '\n' for p in sorted(packages)]
+        installed = [p + '\n' for p in sorted(set(installed))]
+        packages = [p + '\n' for p in sorted(set(packages))]
         diff = self.lists_diff(installed, packages)
         return dict(rc=0, diff=diff, packages=packages)
