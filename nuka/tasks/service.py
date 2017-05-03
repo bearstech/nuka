@@ -28,27 +28,41 @@ class start(Task):
 
 
 class restart(Task):
-    """restart a service"""
+    """restart one or more service"""
 
     diff = False
 
-    def __init__(self, name=None, **kwargs):
-        super(restart, self).__init__(name=name, **kwargs)
+    def __init__(self, services=None, **kwargs):
+        if isinstance(services, str):
+            services = [services]
+        kwargs.update(
+            name=', '.join(services),
+            services=services)
+        super(restart, self).__init__(**kwargs)
 
     def do(self):
-        return self.sh(['service', self.args['name'], 'restart'])
+        for service in self.args['services']:
+            res = self.sh(['service', service, 'restart'])
+        return res
 
 
 class reload(Task):
-    """reload a service"""
+    """reload one or more service"""
 
     diff = False
 
-    def __init__(self, name=None, **kwargs):
-        super(reload, self).__init__(name=name, **kwargs)
+    def __init__(self, services=None, **kwargs):
+        if isinstance(services, str):
+            services = [services]
+        kwargs.update(
+            name=', '.join(services),
+            services=services)
+        super(reload, self).__init__(**kwargs)
 
     def do(self):
-        return self.sh(['service', self.args['name'], 'reload'])
+        for service in self.args['services']:
+            res = self.sh(['service', service, 'reload'])
+        return res
 
 
 class stop(Task):
