@@ -98,6 +98,8 @@ class Config(dict):
             self['template_engine'] = jinja2.Environment(
                 loader=loader,
                 undefined=jinja2.StrictUndefined,
+                keep_trailing_newline=True,
+                autoescape=False,
             )
         return self['template_engine']
 
