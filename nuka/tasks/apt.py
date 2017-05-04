@@ -5,7 +5,6 @@ apt related tasks
 import os
 import time
 import codecs
-import tempfile
 
 from nuka.tasks import http
 from nuka.task import Task
@@ -24,16 +23,16 @@ def apt_watcher(delay, fd):
             if task.is_alive(process):
                 value = time.time() - start
                 if value > inc:
-                    fd.flush()
-                    with codecs.open(fd.name, 'r', 'utf8') as f:
-                        lines = [l.strip() for l in f.readlines()
-                                 if l.startswith(('dlstatus:', 'pmstatus:'))]
-                        if lines:
-                            line = lines[-1].split(':', 3)[-1]
-                            if line != last_sent:
-                                last_sent = line
-                                inc += delay
-                                task.send_progress(line)
+                    line = fd.readline()
+                    while line:
+                        if line.startswith(('dlstatus:', 'pmstatus:')):
+                            line = line.strip()
+                            new_line = line
+                        line = fd.readline()
+                    if new_line != last_sent:
+                        last_sent = new_line
+                        inc += delay
+                        task.send_progress(new_line.split(':', 3)[-1])
                 yield
             else:
                 # process is dead
@@ -139,13 +138,13 @@ class update(Task):
             args = ['apt-get', '--force-yes', '-y', '--fix-missing']
             watch = self.args.get('watch')
             if watch:
-                with tempfile.NamedTemporaryFile() as fd:
-                    kwargs['stdout'] = fd
-                    kwargs['watcher'] = apt_watcher(watch, fd)
-                    kwargs['short_args'] = ['apt-get', 'update']
-                    args.extend(['-oAPT::Status-Fd=1', 'update'])
-                    res = self.sh(args, **kwargs)
-                    res['stdout'] = ''
+                r, w = os.pipe2(os.O_NONBLOCK)
+                kwargs['stdout'] = os.fdopen(w)
+                kwargs['watcher'] = apt_watcher(watch, os.fdopen(r))
+                kwargs['short_args'] = ['apt-get', 'update']
+                args.extend(['-oAPT::Status-Fd=1', 'update'])
+                res = self.sh(args, **kwargs)
+                res['stdout'] = ''
             else:
                 res = self.sh(args + ['update'], **kwargs)
             if cache:
@@ -243,13 +242,13 @@ class install(Task):
             args = ['apt-get', 'install', '-qqy',
                     '-oDpkg::Options::=--force-confold']
             if watch:
-                with tempfile.NamedTemporaryFile() as fd:
-                    kwargs['stdout'] = fd
-                    kwargs['watcher'] = apt_watcher(watch, fd)
-                    kwargs['short_args'] = ['apt-get', 'install']
-                    args.extend(['-oAPT::Status-Fd=1'] + packages)
-                    res = self.sh(args, **kwargs)
-                    res['stdout'] = ''
+                r, w = os.pipe2(os.O_NONBLOCK)
+                kwargs['stdout'] = os.fdopen(w)
+                kwargs['watcher'] = apt_watcher(watch, os.fdopen(r))
+                kwargs['short_args'] = ['apt-get', 'install']
+                args.extend(['-oAPT::Status-Fd=1'] + packages)
+                res = self.sh(args, **kwargs)
+                res['stdout'] = ''
             else:
                 res = self.sh(args + packages, **kwargs)
         else:

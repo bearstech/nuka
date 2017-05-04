@@ -157,13 +157,19 @@ class Task(RemoteTask):
             if stdout is None:
                 stdout = kwargs['stdout']
                 with open(stdout.name) as fd:
-                    stdout = fd.read()
+                    try:
+                        stdout = fd.read()
+                    except OSError:
+                        stdout = ''
             if isinstance(stdout, bytes):
                 stdout = stdout.decode('utf8')
             if stderr is None:
                 stderr = kwargs['stderr']
                 with open(stderr.name) as fd:
-                    stderr = fd.read()
+                    try:
+                        stderr = fd.read()
+                    except OSError:
+                        stderr = ''
             if isinstance(stderr, bytes):
                 stderr = stderr.decode('utf8')
             rc = p.returncode
