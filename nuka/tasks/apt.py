@@ -18,7 +18,7 @@ def apt_watcher(delay, fd):
     def watcher(task, process):
         start = time.time()
         inc = delay
-        last_sent = None
+        new_line = last_sent = None
         while True:
             if task.is_alive(process):
                 value = time.time() - start
