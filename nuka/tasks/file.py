@@ -58,7 +58,7 @@ class mkdir(Task):
         if not os.path.exists(dst):
             res = self.lists_diff([], [dst + '\n'], fromfile=dst)
             diff = u''.join(res) + u'\n'
-        return dict(rc=0, diff=diff)
+        return dict(rc=0, diff=diff, dst=dst)
 
 
 class rm(Task):

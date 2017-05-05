@@ -259,7 +259,8 @@ class install(Task):
     def diff(self):
         packages = self.args['packages']
         installed = self.dpkg_list(packages)
+        to_install = [p for p in packages if p not in installed]
         installed = [p + '\n' for p in sorted(set(installed))]
         packages = [p + '\n' for p in sorted(set(packages))]
         diff = self.lists_diff(installed, packages)
-        return dict(rc=0, diff=diff, packages=packages)
+        return dict(rc=0, diff=diff, changed=to_install)

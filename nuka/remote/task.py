@@ -276,7 +276,7 @@ class Task(RemoteTask):
         if logs.strip():
             res['log'] = logs
         if 'diff' in res:
-            res['changed'] = bool(res['diff'])
+            res.setdefault('changed', bool(res['diff']))
         utils.proto_dumps_std_threadsafe(res, sys.stdout)
         sys.exit(0)
 
