@@ -203,6 +203,7 @@ class put(Task):
     def diff(self):
         diff = ''
         files = self.args['files'] or []
+        files_changed = []
         for fd in files:
             dst = fd['dst']
             if 'linkto' in fd:
@@ -227,8 +228,10 @@ class put(Task):
                 else:
                     with codecs.open(dst, 'rb', 'utf8') as fd_:
                         old_text = fd_.read()
+            if old_text != new_text:
+                files_changed.append(dst)
             diff += self.texts_diff(old_text, new_text, fromfile=dst)
-        return dict(rc=0, diff=diff)
+        return dict(rc=0, diff=diff, changed=files_changed)
 
 
 class scripts(put):

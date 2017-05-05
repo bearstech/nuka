@@ -33,6 +33,10 @@ class Cli(argparse.ArgumentParser):
         self.add_argument('--uvloop', action='store_true', default=False,
                           help='use uvloop as eventloop')
 
+    @property
+    def arguments(self):
+        return list(self._option_string_actions)
+
     def parse_known_args(self, *args, **kwargs):
         self.args, argv = super().parse_known_args(*args, **kwargs)
         return self.args, argv
