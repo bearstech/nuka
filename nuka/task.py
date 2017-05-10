@@ -407,7 +407,7 @@ class setup(SetupTask):
     setup_cmd = (
         '{0}rm -Rf {1[remote_tmp]}; '
         '{0}mkdir -p {1[remote_tmp]} && {0}chmod 777 {1[remote_tmp]} &&'
-        '{0}mkdir -p {1[remote_dir]} && {0}tar -C {1[remote_dir]} -xf - && '
+        '{0}mkdir -p {1[remote_dir]} && {0}tar -C {1[remote_dir]} -xzf - && '
         '{0}`which python 2> /dev/null || which python3 || echo python` '
         '{1[script]} --setup'
     )
@@ -450,6 +450,8 @@ class setup(SetupTask):
                 proc = await self.host.create_process(cmd, task=self)
                 proc.stdin.write(stdin)
                 await proc.stdin.drain()
+                # why do we have to close stdin with compressed tar file ?
+                proc.stdin.close()
                 res = await proc.next_message()
             except OSError:
                 if i == retries:

@@ -24,6 +24,7 @@ from collections import OrderedDict
 import nuka
 from nuka import log
 from nuka import process
+from nuka.task import wait_for_boot
 from nuka.task import get_task_from_stack
 from nuka.task import destroy as destroy_task
 
@@ -144,6 +145,12 @@ class BaseHost(object):
     async def boot(self):  # pragma: no cover
         """boot the host"""
         return dict(rc=0)
+
+    async def get_inventory(self):  # pragma: no cover
+        """return host's inventory. await for host's boot & setup if needed"""
+        if not self.fully_booted.done():
+            await wait_for_boot(self)
+        return self.vars['inventory']
 
     async def destroy(self):  # pragma: no cover
         """destroy the host"""

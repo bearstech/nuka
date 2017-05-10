@@ -37,7 +37,7 @@ def build_archive(extra_classes=[]):
 
         nuka_dir = os.path.dirname(nuka.__file__)
         fd = io.BytesIO()
-        with tarfile.TarFile(fileobj=fd, mode='w') as tfd:
+        with tarfile.open(fileobj=fd, mode='x:gz') as tfd:
             for dirname in dirnames:
                 filename = dirname + '/__init__.py'
                 if filename not in filenames:
@@ -65,7 +65,9 @@ def build_archive(extra_classes=[]):
             filenames = tfd.getnames()
 
         fd.seek(0)
-        build_archive.archive = fd.read()
+        build_archive.archive = fd.read() + b'\0'
+        with open('/tmp/nuka.tar.gz', 'wb') as fd:
+            fd.write(build_archive.archive)
 
         if nuka.cli.args.verbose > 6:
             print('tarfile({0}ko): \n - {1}'.format(

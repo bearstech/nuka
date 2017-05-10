@@ -15,11 +15,14 @@ class setup(Task):
         modules.insert(0, 'nuka.inventory.python')
 
         inventory = {}
+        done = set()
         for name in modules:
-            mod = importlib.import_module(name)
-            meth = getattr(mod, 'update_inventory', None)
-            if meth is not None:
-                meth(inventory)
+            if name not in done:
+                done.add(name)
+                mod = importlib.import_module(name)
+                meth = getattr(mod, 'update_inventory', None)
+                if meth is not None:
+                    meth(inventory)
         return {'inventory': inventory}
 
     def do(self):
