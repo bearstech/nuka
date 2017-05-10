@@ -27,3 +27,11 @@ nuka.tasks.mysql.my_cnf
 .. autofunction:: my_cnf
 
 
+
+nuka.tasks.mysql.set_root_password
+==================================================================
+
+.. autofunction:: set_root_password
+
+
+

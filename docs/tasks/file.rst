@@ -29,6 +29,13 @@ nuka.tasks.file.chmod
 
 
 
+nuka.tasks.file.chown
+==================================================================
+
+.. autofunction:: chown
+
+
+
 nuka.tasks.file.exists
 ==================================================================
 
@@ -62,6 +69,13 @@ Example:
 
 
 
+nuka.tasks.file.mkdirs
+==================================================================
+
+.. autofunction:: mkdirs
+
+
+
 nuka.tasks.file.put
 ==================================================================
 
@@ -75,7 +89,10 @@ Example:
     await file.put([
         dict(src='/etc/resolv.conf', dst='/tmp/resolv.conf'),
         dict(src='docs/utils.py', dst='/tmp/utils.py', executable=True),
+        # jinja2 template
         dict(src='example.j2', dst='/tmp/xx1', mod='600'),
+        # symlink
+        dict(linkto='/etc/hosts', dst='/etc/hosts2'),
     ], ctx=dict(name='example'))
 
 
@@ -114,5 +131,6 @@ Example:
     await file.update(
         dst='/etc/default/useradd',
         replaces=[(r'^\# HOME=/home', 'HOME=/new_home')])
+
 
 

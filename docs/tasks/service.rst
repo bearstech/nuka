@@ -7,6 +7,13 @@
 .. automodule:: nuka.tasks.service
 
 
+nuka.tasks.service.reload
+==================================================================
+
+.. autofunction:: reload
+
+
+
 nuka.tasks.service.restart
 ==================================================================
 
@@ -46,5 +53,6 @@ Example:
 .. code-block:: python
 
     await service.stop('rsync')
+
 
 
