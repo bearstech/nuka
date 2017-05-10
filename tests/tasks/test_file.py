@@ -36,7 +36,10 @@ async def test_put_doc(host):
     await file.put([
         dict(src='/etc/resolv.conf', dst='/tmp/resolv.conf'),
         dict(src='docs/utils.py', dst='/tmp/utils.py', executable=True),
+        # jinja2 template
         dict(src='example.j2', dst='/tmp/xx1', mod='600'),
+        # symlink
+        dict(linkto='/etc/hosts', dst='/etc/hosts2'),
     ], ctx=dict(name='example'))
 
 

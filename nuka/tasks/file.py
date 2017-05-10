@@ -61,6 +61,33 @@ class mkdir(Task):
         return dict(rc=0, diff=diff, dst=dst)
 
 
+class mkdirs(Task):
+    """create directories"""
+
+    def __init__(self, directories=None, **kwargs):
+        kwargs.setdefault('name', ', '.join([d['dst'] for d in directories]))
+        super(mkdirs, self).__init__(directories=directories, **kwargs)
+
+    def do(self):
+        res = dict(rc=0, changed=[])
+        for d in self.args['directories']:
+            dst = d.pop('dst')
+            r = utils.makedirs(dst, **d)
+            if r['changed']:
+                res['changed'].append(dst)
+        return res
+
+    def diff(self):
+        res = dict(rc=0, diff='', changed=[])
+        for d in self.args['directories']:
+            dst = d.pop('dst')
+            r = mkdir(dst, **d).diff()
+            if r['diff']:
+                res['diff'].append(r['diff'])
+                res['changed'].append(dst)
+        return res
+
+
 class rm(Task):
     """rm a file or directory"""
 
@@ -169,10 +196,10 @@ class put(Task):
                 dst = fd['dst'] = os.path.expanduser(dst)
             if 'linkto' in fd:
                 link = fd['linkto']
-                if os.path.exists(link):
+                if os.path.islink(dst):
                     if os.path.realpath(dst) != os.path.realpath(link):
-                        os.remove(link)
-                else:
+                        os.remove(dst)
+                if not os.path.exists(link):
                     self.send_log((
                         'Invalid link destination for '
                         '{0[dst]} -> no such file {0[linkto]}'
