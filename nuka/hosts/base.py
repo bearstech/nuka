@@ -120,10 +120,34 @@ class BaseHost(object):
     def cancelled(self):
         return self._cancelled
 
+    def _get_best_addresses(self, public=True):
+        hvars = self.vars
+        try:
+            return hvars[public and 'public_ip' or 'private_ip']
+        except KeyError:
+            pass
+        for iface in hvars.get('inventory', {}).get('ifaces', {}).values():
+            if not iface['macadress']:
+                # tunX
+                continue
+            for net in iface.get('inet', []):
+                if iface['primary']:
+                    hvars['public_ip'] = net['address']
+                elif not net['is_private'] and 'public_ip' not in hvars:
+                    hvars['public_ip'] = net['address']
+                elif net['is_private'] and 'private_ip' not in hvars:
+                    hvars['private_ip'] = net['address']
+        return hvars[public and 'public_ip' or 'private_ip']
+
+    @property
+    def public_ip(self):
+        """return host's public ip"""
+        return self._get_best_addresses()
+
     @property
     def private_ip(self):
         """return host's private ip"""
-        raise NotImplementedError()
+        return self._get_best_addresses()
 
     def __getattr__(self, attr):
         return self.vars[attr]

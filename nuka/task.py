@@ -20,6 +20,7 @@ import codecs
 import inspect
 import asyncio
 import logging
+import importlib
 
 from nuka.remote.task import RemoteTask
 from nuka.configuration import config
@@ -454,6 +455,7 @@ class setup(SetupTask):
                 proc.stdin.close()
                 res = await proc.next_message()
             except OSError:
+                raise
                 if i == retries:
                     self.host.log.exception('setup')
                     raise
@@ -468,6 +470,11 @@ class setup(SetupTask):
                 break
         self.res.update(res)
         host.vars['inventory'] = self.res['inventory']
+        for name in mods:
+            mod = importlib.import_module(name)
+            meth = getattr(mod, 'finalize_inventory', None)
+            if meth is not None:
+                meth(host.vars['inventory'])
         host.log.debug(
             'Inventory:\n{0}'.format(host.vars['inventory']))
         if not host.fully_booted.done():

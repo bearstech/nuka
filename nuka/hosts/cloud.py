@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from collections import defaultdict
 from functools import partial
+import ipaddress
 import threading
 import asyncio
 import codecs
@@ -105,10 +106,12 @@ class Host(base.Host):
 
     @property
     def public_ip(self):
+        """return host's public ip"""
         return self.node.public_ips[0]
 
     @property
     def private_ip(self):
+        """return host's private ip"""
         return self.node.private_ips[0]
 
     def get_node(self, create=True, task=None, **kwargs):
@@ -228,11 +231,17 @@ class OpenstackHost(Host):
 
     @property
     def public_ip(self):
+        """return host's public ip"""
         for iface in self.node.interface_list():
             for addr in iface.fixed_ips:
                 ip = addr['ip_address']
-                if ':' not in ip:
-                    return ip
+                try:
+                    a = ipaddress.IPv4Address(ip)
+                except ValueError:
+                    continue
+                else:
+                    if not a.is_private:
+                        return ip
 
     @property
     def private_ip(self):

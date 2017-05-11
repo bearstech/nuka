@@ -70,7 +70,10 @@ def iter_ifaps(ifap):
 
 
 def getinfos(ifa):
-    sa = ifa.ifa_addr.contents
+    try:
+        sa = ifa.ifa_addr.contents
+    except ValueError:
+        raise StopIteration()
     family = sa.sa_family
     addr = None
     if family == socket.AF_INET6:
@@ -115,13 +118,28 @@ def update_inventory(inventory):
                     filename = '/sys/class/net/{0}/address'.format(name)
                     if os.path.isfile(filename):
                         with codecs.open(filename, 'r', 'utf8') as fd:
-                            d['macadress'] = fd.read().strip()
+                            d['macadress'] = fd.read().strip() or None
         return ifaces
     finally:
         libc.freeifaddrs(ifap)
 
 
+def finalize_inventory(inventory):
+    import ipaddress
+    ifaces = inventory['ifaces']
+    for iface in ifaces.values():
+        for net in iface.get('inet', []):
+            try:
+                addr = ipaddress.IPv4Address(net['address'])
+            except ValueError:
+                is_private = None
+            else:
+                is_private = addr.is_private
+            net['is_private'] = is_private
+
+
 if __name__ == '__main__':
     inventory = {}
     update_inventory(inventory)
+    finalize_inventory(inventory)
     print(inventory)
