@@ -132,7 +132,10 @@ class BaseHost(object):
                 continue
             for net in iface.get('inet', []):
                 if iface['primary']:
-                    hvars['public_ip'] = net['address']
+                    if net['is_private']:
+                        hvars['private_ip'] = net['address']
+                    else:
+                        hvars['public_ip'] = net['address']
                 elif not net['is_private'] and 'public_ip' not in hvars:
                     hvars['public_ip'] = net['address']
                 elif net['is_private'] and 'private_ip' not in hvars:
