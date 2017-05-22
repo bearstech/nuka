@@ -122,7 +122,7 @@ class DockerContainer(BaseHost):
             start = time.time()
             container = self.cli.create_container(
                 image=self.image,
-                name=self.name,
+                name=self.name, hostname=self.name,
                 command=self.vars.get('command', None))
             self.add_time(start=start, type='api_call', task=task,
                           name='create()')
