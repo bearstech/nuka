@@ -196,7 +196,8 @@ class install(Task):
 
     def dpkg_list(self, packages):
         installed = []
-        res = self.sh(['dpkg', '-l'] + (packages or []), check=False)
+        splited = {p.split('/', 1)[0]: p for p in packages}
+        res = self.sh(['dpkg', '-l'] + list(splited.keys() or []), check=False)
         for line in res['stdout'].split('\n')[5:]:
             line = line.split()
             try:
@@ -207,7 +208,7 @@ class install(Task):
                 if state == 'ii':
                     # handle package_name:i386
                     package = package.split(':', 1)[0]
-                    installed.append(package)
+                    installed.append(splited[package])
         return installed
 
     def do(self):
