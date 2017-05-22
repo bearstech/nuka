@@ -83,7 +83,7 @@ class mkdirs(Task):
             dst = d.pop('dst')
             r = mkdir(dst, **d).diff()
             if r['diff']:
-                res['diff'].append(r['diff'])
+                res['diff'] += r['diff']
                 res['changed'].append(dst)
         return res
 
