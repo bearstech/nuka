@@ -140,7 +140,9 @@ class BaseHost(object):
                     hvars['public_ip'] = net['address']
                 elif net['is_private'] and 'private_ip' not in hvars:
                     hvars['private_ip'] = net['address']
-        return hvars[public and 'public_ip' or 'private_ip']
+        if public:
+            return hvars.get('public_ip', hvars.get('private_ip'))
+        return hvars.get('private_ip', hvars.get('public_ip'))
 
     @property
     def public_ip(self):
