@@ -2,7 +2,6 @@
 """
 mysql related tasks
 """
-import logging as log
 import os
 import codecs
 import getpass
