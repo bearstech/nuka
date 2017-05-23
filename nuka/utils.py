@@ -192,7 +192,7 @@ class secret(object):
             valids = list(range(33, 127))
         else:
             valids = [ord(a) for a in alphabet]
-        self.valids = [n for n in valids if n not in (34, 35, 39, 92)]
+        self.valids = [n for n in valids if n not in (34, 35, 39, 61, 92)]
         self.length = length
         self.iterator = self.iterator()
 
