@@ -58,7 +58,16 @@ class Process(subprocess.Process):
                     print((header, stdout))
                 stderr = await self.stderr.read()
                 if stderr:
-                    raise OSError(stderr)
+                    stderr = stderr.decode('utf8')
+                    err = stderr.lower()
+                    exc = OSError
+                    if 'could not resolve hostname' in err:
+                        exc = LookupError
+                    elif 'host key verification failed' in err:
+                        exc = LookupError
+                    elif 'permission denied' in err:
+                        exc = LookupError
+                    raise exc(stderr)
                 else:
                     raise ValueError((length, stderr))
             data = b''

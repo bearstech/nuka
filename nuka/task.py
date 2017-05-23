@@ -454,14 +454,19 @@ class setup(SetupTask):
                 # why do we have to close stdin with compressed tar file ?
                 proc.stdin.close()
                 res = await proc.next_message()
-            except OSError:
-                raise
+            except LookupError as e:
+                # ssh/network error
+                self.host.log.error(e.args[0])
+                self.cancel()
+                return
+            except OSError as e:
                 if i == retries:
                     self.host.log.exception('setup')
                     raise
                 else:
                     self.host.log.warn(
-                        'Host not available. Retry %s/%s in 3s...', i, retries)
+                        '%s. Retry %s/%s in 3s...',
+                        e.args[0], i, retries)
                     time.sleep(3)
             except:
                 self.host.log.exception('setup')
