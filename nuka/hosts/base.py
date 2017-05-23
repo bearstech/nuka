@@ -109,7 +109,7 @@ class BaseHost(object):
             kwargs.update(start=start, task=task)
             self._task_times.append(kwargs)
         else:  # pragma: no cover
-            self.log.warn("can't retrieve task\n{}".format(kwargs))
+            self.log.warning("can't retrieve task\n{}".format(kwargs))
 
     def cancel(self):
         for task in self.running_tasks():

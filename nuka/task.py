@@ -233,7 +233,7 @@ class Task(Base, RemoteTask):
                     if attr is False:
                         self.host.log.info("{0}.diff is False".format(self))
                     else:
-                        self.host.log.warn("{0}.diff is None".format(self))
+                        self.host.log.warning("{0}.diff is None".format(self))
                     self.set_result(self)
                     return
             if self.host.fully_booted.done():
@@ -464,7 +464,7 @@ class setup(SetupTask):
                     self.host.log.exception('setup')
                     raise
                 else:
-                    self.host.log.warn(
+                    self.host.log.warning(
                         '%s. Retry %s/%s in 3s...',
                         e.args[0], i, retries)
                     time.sleep(3)

@@ -114,7 +114,7 @@ class DockerContainer(BaseHost):
                           name='images()')
             if not found:
                 start = time.time()
-                self.log.warn('Pulling image {0}...'.format(self.image))
+                self.log.warning('Pulling image {0}...'.format(self.image))
                 subprocess.call(['docker', 'pull', self.image])
                 self.add_time(start=start, type='api_call', task=task,
                               name='pull()')

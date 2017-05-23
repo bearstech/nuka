@@ -134,7 +134,7 @@ class Host(base.Host):
                 self.add_time(start=start, type='api_call', task=task,
                               name='driver.ex_get_node()')
                 if create:
-                    self.log.warn(
+                    self.log.warning(
                         'Node {0} does not exist. Creating...'.format(self))
                     args = self.get_create_node_args(driver=driver, task=task)
                     args['name'] = self.name
@@ -161,7 +161,7 @@ class Host(base.Host):
                         print(self._node.status)
                     else:
                         self._node = driver.create_node(**args)
-                    self.log.warn('Node {0} created'.format(self))
+                    self.log.warning('Node {0} created'.format(self))
                     self.add_time(start=start, type='api_call', task=task,
                                   name='driver.ex_create_node()')
             else:

@@ -74,11 +74,11 @@ def session_container(request):
 @pytest.yield_fixture(scope='function')
 def host(request, session_container, event_loop):
     session_container._cancelled = False
-    session_container.log.warn(
+    session_container.log.warning(
         '============ START {0} =============='.format(request.function))
     session_container.loop = event_loop
     yield session_container
-    session_container.log.warn(
+    session_container.log.warning(
         '============ END {0} =============='.format(request.function))
 
 
