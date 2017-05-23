@@ -196,8 +196,11 @@ class put(Task):
                 dst = fd['dst'] = os.path.expanduser(dst)
             if 'linkto' in fd:
                 link = fd['linkto']
-                if os.path.islink(dst):
-                    if os.path.realpath(dst) != os.path.realpath(link):
+                if os.path.exists(dst):
+                    if os.path.islink(dst):
+                        if os.path.realpath(dst) != os.path.realpath(link):
+                            os.unlink(dst)
+                    else:
                         os.remove(dst)
                 if not os.path.exists(link):
                     self.send_log((
