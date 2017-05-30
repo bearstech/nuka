@@ -33,6 +33,8 @@ _env_keys = {
         ('GCE_PROJECT', 'project'),
     ),
     Provider.OPENSTACK: (
+        ('OS_VERSION', '2.0'),
+        ('OS_AUTH_URL', 'auth_url'),
         ('OS_USERNAME', 'username'),
         ('OS_PASSWORD', 'password'),
         ('OS_PROJECT_NAME', 'project_name'),
@@ -44,7 +46,7 @@ _env_keys = {
 }
 
 
-def driver_from_config(provider):
+def driver_from_config(provider, **args):
     # cache one driver per thread. probably only usefull for main thread
     ident = threading.get_ident()
     driver = _drivers[provider].get(ident)
@@ -54,20 +56,21 @@ def driver_from_config(provider):
         else:
             klass = get_driver(provider)
 
-        args = nuka.config[provider.lower()].get('driver', {}) or {}
-        if isinstance(args, str):
-            # load arguments from file
-            with open(os.path.expanduser(args)) as fd:
-                args = utils.json.load(fd)
-
-        for k, new_k in _env_keys.get(provider, ()):
-            if k in os.environ:
-                v = os.environ[k]
-                args[new_k] = v
         if not args:
-            raise RuntimeError((
-                'Not able to get the driver configuration for {} provider.'
-            ).format(provider))
+            args = nuka.config[provider.lower()].get('driver', {}) or {}
+            if isinstance(args, str):
+                # load arguments from file
+                with open(os.path.expanduser(args)) as fd:
+                    args = utils.json.load(fd)
+
+            for k, new_k in _env_keys.get(provider, ()):
+                if k in os.environ:
+                    v = os.environ[k]
+                    args[new_k] = v
+            if not args:
+                raise RuntimeError((
+                    'Not able to get the driver configuration for {} provider.'
+                ).format(provider))
 
         driver = klass(**args)
         _drivers[ident] = driver
@@ -79,12 +82,14 @@ class Host(base.Host):
 
     use_sudo = True
 
-    def __init__(self, hostname, node=None, create_node_args=None, **vars):
+    def __init__(self, hostname, node=None,
+                 create=True, create_node_args=None, **vars):
         config = nuka.config.get(self.provider.lower(), {})
         user = config.get('user') or 'root'
         vars.setdefault('user', user)
         vars['create_node_args'] = create_node_args or {}
         super().__init__(hostname, **vars)
+        self.create = create
         self._node = node
 
     async def boot(self):
@@ -114,7 +119,7 @@ class Host(base.Host):
         """return host's private ip"""
         return self.node.private_ips[0]
 
-    def get_node(self, create=True, task=None, **kwargs):
+    def get_node(self, task=None, **kwargs):
         if self._node is False:
             raise RuntimeError('Node {0} was destroyed'.format(self))
         elif self._node is None:
@@ -133,42 +138,46 @@ class Host(base.Host):
             except (ResourceNotFoundError, NotFound):
                 self.add_time(start=start, type='api_call', task=task,
                               name='driver.ex_get_node()')
-                if create:
-                    self.log.warning(
-                        'Node {0} does not exist. Creating...'.format(self))
-                    args = self.get_create_node_args(driver=driver, task=task)
-                    args['name'] = self.name
-                    start = time.time()
-                    if self.provider in nova_providers:
-                        node = driver.servers.create(**args)
-                        # it take at least 20s to boot a vm
-                        time.sleep(20)
-                        wait = 15
-                        while node.status not in ('ACTIVE',):
-                            print(node.is_loaded(), node.status)
-                            try:
-                                node = driver.servers.find(name=self.hostname)
-                            except NotFound:
-                                pass
-                            if node.status in ('ACTIVE',):
-                                # final wait
-                                time.sleep(3)
-                                break
-                            else:
-                                wait = (wait - 5) or 2
-                                time.sleep(wait)
-                        self._node = node
-                        print(self._node.status)
-                    else:
-                        self._node = driver.create_node(**args)
-                    self.log.warning('Node {0} created'.format(self))
-                    self.add_time(start=start, type='api_call', task=task,
-                                  name='driver.ex_create_node()')
+                if self.create:
+                    self.create_node(driver=driver, task=task)
             else:
                 self.add_time(start=start, type='api_call', task=task,
                               name='driver.ex_get_node()')
         return self._node
     node = property(get_node)
+
+    def create_node(self, driver=None, task=None, **kwargs):
+        self.log.warning(
+            'Node {0} does not exist. Creating...'.format(self))
+        if driver is None:
+            driver = driver_from_config(provider=self.provider)
+        args = self.get_create_node_args(driver=driver, task=task)
+        args['name'] = self.name
+        start = time.time()
+        if self.provider in nova_providers:
+            node = driver.servers.create(**args)
+            # it take at least 20s to boot a vm
+            time.sleep(20)
+            wait = 15
+            while node.status not in ('ACTIVE',):
+                print(node.is_loaded(), node.status)
+                try:
+                    node = driver.servers.find(name=self.hostname)
+                except NotFound:
+                    pass
+                if node.status in ('ACTIVE',):
+                    # final wait
+                    time.sleep(3)
+                    break
+                else:
+                    wait = (wait - 5) or 2
+                    time.sleep(wait)
+            self._node = node
+        else:
+            self._node = driver.create_node(**args)
+        self.log.warning('Node {0} created'.format(self))
+        self.add_time(start=start, type='api_call', task=task,
+                      name='driver.ex_create_node()')
 
     def get_create_node_args(self, driver=None, task=None):
         node_args = nuka.config[self.provider.lower()]['create_node_args']
@@ -285,8 +294,13 @@ class Cloud(base.HostGroup):
         Provider.OPENSTACK: OpenstackHost,
     }
 
-    def __init__(self, provider=Provider.GCE, use_sudo=False):
+    def __init__(self, provider=None, driver_args=None,
+                 create=True, use_sudo=False):
+        if provider is None:
+            raise RuntimeError('A cloud instance require a valid provider')
         self.provider = provider
+        self.driver_args = driver_args or {}
+        self.create = create
         if provider in self.host_classes:
             self.host_class = self.host_classes[self.provider]
         else:
@@ -296,7 +310,7 @@ class Cloud(base.HostGroup):
 
     @property
     def driver(self):
-        return driver_from_config(self.provider)
+        return driver_from_config(self.provider, **self.driver_args)
 
     def cached_list_nodes(self):
         cls = self.__class__
@@ -318,11 +332,17 @@ class Cloud(base.HostGroup):
     def get_or_create_node(self, hostname, **kwargs):
         """Return a Host. Create it if needed"""
         node = kwargs.pop('node', None)
+        kwargs.setdefault('create', self.create)
         if hostname not in self:
             self[hostname] = self.host_class(hostname=hostname, **kwargs)
         if node is not None:
             self.hostname._node = node
         return self[hostname]
+
+    def get_node(self, hostname, **kwargs):
+        """Return a Host. Create it if needed"""
+        kwargs['create'] = False
+        return self.get_or_create_node(hostname, **kwargs)
 
     def from_compose(self, project_name=None, filename='docker-compose.yml'):
         """Return a host group with hosts names extracted from compose file"""
