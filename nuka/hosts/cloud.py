@@ -83,10 +83,11 @@ class Host(base.Host):
     use_sudo = True
 
     def __init__(self, hostname, node=None,
-                 create=True, create_node_args=None, **vars):
+                 create=True, driver_args=None, create_node_args=None, **vars):
         config = nuka.config.get(self.provider.lower(), {})
         user = config.get('user') or 'root'
         vars.setdefault('user', user)
+        vars['driver_args'] = driver_args or {}
         vars['create_node_args'] = create_node_args or {}
         super().__init__(hostname, **vars)
         self.create = create
@@ -125,7 +126,8 @@ class Host(base.Host):
         elif self._node is None:
 
             start = time.time()
-            driver = driver_from_config(provider=self.provider)
+            driver = driver_from_config(provider=self.provider,
+                                        **self.driver_args)
             self.add_time(start=start, type='api_call', task=task,
                           name='Driver.from_config()')
 
@@ -150,7 +152,8 @@ class Host(base.Host):
         self.log.warning(
             'Node {0} does not exist. Creating...'.format(self))
         if driver is None:
-            driver = driver_from_config(provider=self.provider)
+            driver = driver_from_config(provider=self.provider,
+                                        **self.driver_args)
         args = self.get_create_node_args(driver=driver, task=task)
         args['name'] = self.name
         start = time.time()
@@ -307,6 +310,7 @@ class Cloud(base.HostGroup):
             name = '{0}Host'.format(self.provider.title())
             args = {'provider': self.provider, 'use_sudo': use_sudo}
             self.host_class = type(name, (Host,), args)
+        self._nodes = {}
 
     @property
     def driver(self):
@@ -314,15 +318,14 @@ class Cloud(base.HostGroup):
 
     def cached_list_nodes(self):
         cls = self.__class__
-        if not cls._nodes.get(self.provider):
+        if not self._nodes:
             cls._list_lock.acquire()
-            if not cls._nodes.get(self.provider):
-                if self.provider in nova_providers:
-                    cls._nodes[self.provider] = self.driver.servers.list()
-                else:
-                    cls._nodes[self.provider] = self.driver.list_nodes()
+            if self.provider in nova_providers:
+                self._nodes = self.driver.servers.list()
+            else:
+                self._nodes = self.driver.list_nodes()
             cls._list_lock.release()
-        return cls._nodes[self.provider]
+        return self._nodes
 
     def __getitem__(self, item):
         if item not in self:
@@ -331,18 +334,17 @@ class Cloud(base.HostGroup):
 
     def get_or_create_node(self, hostname, **kwargs):
         """Return a Host. Create it if needed"""
-        node = kwargs.pop('node', None)
         kwargs.setdefault('create', self.create)
+        kwargs['driver_args'] = self.driver_args
         if hostname not in self:
             self[hostname] = self.host_class(hostname=hostname, **kwargs)
-        if node is not None:
-            self.hostname._node = node
         return self[hostname]
 
     def get_node(self, hostname, **kwargs):
         """Return a Host. Create it if needed"""
         kwargs['create'] = False
-        return self.get_or_create_node(hostname, **kwargs)
+        host_node = None
+        return self.get_or_create_node(hostname, node=host_node, **kwargs)
 
     def from_compose(self, project_name=None, filename='docker-compose.yml'):
         """Return a host group with hosts names extracted from compose file"""
