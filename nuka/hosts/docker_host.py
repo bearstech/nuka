@@ -32,6 +32,8 @@ class DockerContainer(BaseHost):
         ...     image='bearstech/nukai:debian-jessie-python3')
     """
 
+    provider = 'docker'
+
     def __init__(self, hostname=None, image='bearstech/nukai:latest',
                  **kwargs):
         kwargs.update(hostname=hostname, image=image)

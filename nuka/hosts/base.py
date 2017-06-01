@@ -50,6 +50,7 @@ nuka.config['all_hosts'] = all_hosts
 
 class BaseHost(object):
 
+    provider = None
     stds = dict(
         stdin=asyncio.subprocess.PIPE,
         stdout=asyncio.subprocess.PIPE,
