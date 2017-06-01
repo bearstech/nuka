@@ -582,7 +582,7 @@ def create_setup_tasks(host):
 
 
 def get_task_from_stack():
-    for info in inspect.stack(2):
+    for info in inspect.stack(3):
         f = info.frame
         self = f.f_locals.get('self')
         if isinstance(f.f_locals.get('self'), Base):

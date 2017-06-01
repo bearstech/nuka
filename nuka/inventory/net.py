@@ -90,6 +90,9 @@ def getinfos(ifa):
 
 
 def update_inventory(inventory):
+    inventory['fqdn'] = socket.getfqdn()
+    inventory['hostname'] = socket.gethostname()
+
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.connect(('example.com', 1))  # connect() for UDP doesn't send packets
     inet_addr = s.getsockname()[0]
