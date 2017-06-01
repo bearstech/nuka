@@ -125,26 +125,22 @@ class Host(base.Host):
             raise RuntimeError('Node {0} was destroyed'.format(self))
         elif self._node is None:
 
-            start = time.time()
-            driver = driver_from_config(provider=self.provider,
-                                        **self.driver_args)
-            self.add_time(start=start, type='api_call', task=task,
-                          name='Driver.from_config()')
+            with self.timeit(type='api_call', task=task,
+                             name='Driver.from_config()'):
+                driver = driver_from_config(provider=self.provider,
+                                            **self.driver_args)
 
-            start = time.time()
-            try:
-                if self.provider in nova_providers:
-                    self._node = driver.servers.find(name=self.hostname)
-                else:
-                    self._node = driver.ex_get_node(self.hostname)
-            except (ResourceNotFoundError, NotFound):
-                self.add_time(start=start, type='api_call', task=task,
-                              name='driver.ex_get_node()')
-                if self.create:
-                    self.create_node(driver=driver, task=task)
-            else:
-                self.add_time(start=start, type='api_call', task=task,
-                              name='driver.ex_get_node()')
+            with self.timeit(type='api_call', task=task,
+                             name='driver.ex_get_node()'):
+                try:
+                    if self.provider in nova_providers:
+                        self._node = driver.servers.find(name=self.hostname)
+                    else:
+                        self._node = driver.ex_get_node(self.hostname)
+                except (ResourceNotFoundError, NotFound):
+                    pass
+            if self._node is None and self.create:
+                self.create_node(driver=driver, task=task)
         return self._node
     node = property(get_node)
 
@@ -156,31 +152,30 @@ class Host(base.Host):
                                         **self.driver_args)
         args = self.get_create_node_args(driver=driver, task=task)
         args['name'] = self.name
-        start = time.time()
-        if self.provider in nova_providers:
-            node = driver.servers.create(**args)
-            # it take at least 20s to boot a vm
-            time.sleep(20)
-            wait = 15
-            while node.status not in ('ACTIVE',):
-                print(node.is_loaded(), node.status)
-                try:
-                    node = driver.servers.find(name=self.hostname)
-                except NotFound:
-                    pass
-                if node.status in ('ACTIVE',):
-                    # final wait
-                    time.sleep(3)
-                    break
-                else:
-                    wait = (wait - 5) or 2
-                    time.sleep(wait)
-            self._node = node
-        else:
-            self._node = driver.create_node(**args)
-        self.log.warning('Node {0} created'.format(self))
-        self.add_time(start=start, type='api_call', task=task,
-                      name='driver.ex_create_node()')
+        with self.timeit(type='api_call', task=task,
+                         name='driver.ex_create_node()'):
+            if self.provider in nova_providers:
+                node = driver.servers.create(**args)
+                # it take at least 20s to boot a vm
+                time.sleep(20)
+                wait = 15
+                while node.status not in ('ACTIVE',):
+                    print(node.is_loaded(), node.status)
+                    try:
+                        node = driver.servers.find(name=self.hostname)
+                    except NotFound:
+                        pass
+                    if node.status in ('ACTIVE',):
+                        # final wait
+                        time.sleep(3)
+                        break
+                    else:
+                        wait = (wait - 5) or 2
+                        time.sleep(wait)
+                self._node = node
+            else:
+                self._node = driver.create_node(**args)
+            self.log.warning('Node {0} created'.format(self))
 
     def get_create_node_args(self, driver=None, task=None):
         node_args = nuka.config[self.provider.lower()]['create_node_args']
@@ -226,10 +221,9 @@ class GCEHost(Host):
         self.log.debug4(nuka.utils.json.dumps(node_args, indent=2))
 
         if 'ex_network' not in node_args:
-            start = time.time()
-            net = driver.ex_list_networks()[0]
-            self.add_time(start=start, type='api_call', task=task,
-                          name='Driver.ex_list_networks()')
+            with self.timeit(type='api_call', task=task,
+                             name='Driver.ex_list_networks()'):
+                net = driver.ex_list_networks()[0]
             node_args['ex_network'] = net
 
         return node_args

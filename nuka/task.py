@@ -83,8 +83,8 @@ class Base(asyncio.Future):
         if fut is not None:  # pragma: no cover
             # we waited for boot
             self.meta['start'] = time.time()
+        start = time.time()
         try:
-            start = time.time()
             self.pre_process()
         except Exception as e:
             self.host.log.exception(e)

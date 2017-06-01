@@ -2,7 +2,6 @@
 from functools import partial
 import subprocess
 import asyncio
-import time
 import sys
 
 import docker as docker_py
@@ -93,41 +92,31 @@ class DockerContainer(BaseHost):
         return await self.loop.run_in_executor(None, boot)
 
     def _boot_api(self, task=None):
-        start = time.time()
-        try:
-            self.cli.start(self.name)
-        except docker_py.errors.APIError:
-            pass
-        self.add_time(start=start, type='api_call', task=task,
-                      name='start()')
-        start = time.time()
-        containers = self.cli.containers(filters=dict(name=self.name))
-        self.add_time(start=start, type='api_call', task=task,
-                      name='containers()')
+        with self.timeit(type='api_call', task=task, name='start()'):
+            try:
+                self.cli.start(self.name)
+            except docker_py.errors.APIError:
+                pass
+        with self.timeit(type='api_call', task=task, name='containers()'):
+            containers = self.cli.containers(filters=dict(name=self.name))
         if containers:
             container = containers[0]
         else:
-            start = time.time()
-            found = False
-            for image in self.cli.images():
-                if image['RepoTags'] == [self.image]:
-                    found = True
-            self.add_time(start=start, type='api_call', task=task,
-                          name='images()')
+            with self.timeit(type='api_call', task=task, name='images()'):
+                found = False
+                for image in self.cli.images():
+                    if image['RepoTags'] == [self.image]:
+                        found = True
             if not found:
-                start = time.time()
-                self.log.warning('Pulling image {0}...'.format(self.image))
-                subprocess.call(['docker', 'pull', self.image])
-                self.add_time(start=start, type='api_call', task=task,
-                              name='pull()')
+                with self.timeit(type='api_call', task=task, name='pull()'):
+                    self.log.warning('Pulling image {0}...'.format(self.image))
+                    subprocess.call(['docker', 'pull', self.image])
             self.log.debug('Create container...')
-            start = time.time()
-            container = self.cli.create_container(
-                image=self.image,
-                name=self.name, hostname=self.name,
-                command=self.vars.get('command', None))
-            self.add_time(start=start, type='api_call', task=task,
-                          name='create()')
+            with self.timeit(type='api_call', task=task, name='create()'):
+                container = self.cli.create_container(
+                    image=self.image,
+                    name=self.name, hostname=self.name,
+                    command=self.vars.get('command', None))
         self.vars['container'] = container
         self.vars['container_id'] = container['Id']
         try:

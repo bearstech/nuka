@@ -48,6 +48,23 @@ all_hosts = HostGroup()
 nuka.config['all_hosts'] = all_hosts
 
 
+class TimeIt(object):
+
+    def __init__(self, host, task=None, **kwargs):
+        if task is None:  # pragma: no cover
+            task = get_task_from_stack()
+        kwargs['task'] = task
+        self.start = None
+        self.host = host
+        self.kwargs = kwargs
+
+    def __enter__(self, *args, **kwargs):
+        self.start = time.time()
+
+    def __exit__(self, *args, **kwargs):
+        self.host.add_time(start=self.start, **self.kwargs)
+
+
 class BaseHost(object):
 
     provider = None
@@ -101,6 +118,9 @@ class BaseHost(object):
 
     def running_tasks(self):
         return [t for t in self._tasks if t.running()]
+
+    def timeit(self, task=None, **kwargs):
+        return TimeIt(self, task=None, **kwargs)
 
     def add_time(self, start=None, task=None, **kwargs):
         kwargs.setdefault('time', time.time() - start)

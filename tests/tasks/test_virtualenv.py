@@ -22,7 +22,7 @@ async def test_requirements(host, diff_mode):
         assert '+/tmp/venv/bin/python' in res.res['diff'], res.res['diff']
 
     with tempfile.NamedTemporaryFile() as fd:
-        fd.write(b'coverage==4.2')
+        fd.write(b'six')
         fd.flush()
         assert await venv.virtualenv('/tmp/venv', requirements=fd.name)
 
