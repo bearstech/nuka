@@ -194,21 +194,41 @@ class install(Task):
                       update_cache=update_cache)
         super(install, self).__init__(**kwargs)
 
-    def dpkg_list(self, packages):
-        installed = []
+    def get_packages_list(self, packages):
         splited = {p.split('/', 1)[0]: p for p in packages}
-        res = self.sh(['dpkg', '-l'] + list(splited.keys() or []), check=False)
+        res = self.sh(['apt-cache', 'policy'] + list(splited.keys() or []),
+                      check=False)
+        package = source = None
+        packages = {}
         for line in res['stdout'].split('\n')[5:]:
-            line = line.split()
-            try:
-                state, package = line[:2]
-            except ValueError:
-                pass
-            else:
-                if state == 'ii':
-                    # handle package_name:i386
-                    package = package.split(':', 1)[0]
-                    installed.append(splited[package])
+            sline = line.strip()
+            if not line.startswith(' '):
+                if package:
+                    packages[package['name']] = package
+                package = {'name': line.strip()[:-1]}
+                source = None
+            elif sline.startswith(('Installed:', 'Candidate:')):
+                key, value = sline.split(':', 1)
+                value = value.strip()
+                if value == '(None)':
+                    value = False
+                package[key.lower()] = value
+            elif sline.startswith('***'):
+                source = sline.split()[-1] + ' '
+            elif source and sline.startswith(source):
+                package['source'] = source
+                source = None
+        installed = []
+        for name, fullname in splited.items():
+            package = packages.get(name, {})
+            if name in packages:
+                if package.get('installed'):
+                    if '/' in fullname:
+                        name, source = fullname.split('/', 1)
+                        if source in package.get('source', ''):
+                            installed.append(fullname)
+                    else:
+                        installed.append(fullname)
         return installed
 
     def do(self):
@@ -217,7 +237,7 @@ class install(Task):
         debconf = self.args['debconf']
         if not packages:
             return dict(rc=1, stderr='no packages provided')
-        installed = self.dpkg_list(packages)
+        installed = self.get_packages_list(packages)
         to_install = [p for p in packages if p not in installed]
         if to_install:
             watch = self.args.get('watch')
@@ -259,7 +279,7 @@ class install(Task):
 
     def diff(self):
         packages = self.args['packages']
-        installed = self.dpkg_list(packages)
+        installed = self.get_packages_list(packages)
         to_install = [p for p in packages if p not in installed]
         installed = [p + '\n' for p in sorted(set(installed))]
         packages = [p + '\n' for p in sorted(set(packages))]
