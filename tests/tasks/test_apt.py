@@ -55,10 +55,19 @@ async def test_install_doc(host):
 
 @pytest.mark.asyncio
 async def test_install_diff(host, diff_mode):
+    if 'wheezie' in host.hostname:
+        n = 'wheezie'
+    elif 'jessie' in host.hostname:
+        n = 'jessie'
+    else:
+        n = 'stretch'
     with diff_mode:
         res = await apt.install(packages=['moreutils'])
         assert res.rc == 0
         assert '+moreutils\n' in res.res['diff'], res.res['diff']
+        res = await apt.install(packages=['python/' + n])
+        assert res.rc == 0
+        assert 'python/' + n not in res.res['diff'], res.res['diff']
         res = await apt.install(packages=['python/other-source'])
         assert res.rc == 0
         assert '+python/other-source\n' in res.res['diff'], res.res['diff']

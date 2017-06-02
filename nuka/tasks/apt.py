@@ -200,7 +200,7 @@ class install(Task):
                       check=False)
         package = source = None
         packages = {}
-        for line in res['stdout'].split('\n')[5:]:
+        for line in res['stdout'].split('\n'):
             sline = line.strip()
             if not line.startswith(' '):
                 if package:
@@ -210,13 +210,13 @@ class install(Task):
             elif sline.startswith(('Installed:', 'Candidate:')):
                 key, value = sline.split(':', 1)
                 value = value.strip()
-                if value == '(None)':
+                if value.lower() == '(none)':
                     value = False
                 package[key.lower()] = value
             elif sline.startswith('***'):
                 source = sline.split()[-1] + ' '
             elif source and sline.startswith(source):
-                package['source'] = source
+                package['source'] = sline
                 source = None
         installed = []
         for name, fullname in splited.items():
@@ -225,7 +225,7 @@ class install(Task):
                 if package.get('installed'):
                     if '/' in fullname:
                         name, source = fullname.split('/', 1)
-                        if source in package.get('source', ''):
+                        if source + '/' in package.get('source', ''):
                             installed.append(fullname)
                     else:
                         installed.append(fullname)
