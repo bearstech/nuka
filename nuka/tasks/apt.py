@@ -219,6 +219,8 @@ class install(Task):
                 package['source'] = sline
                 source = None
         installed = []
+        if 'python/jessie' in splited.values():
+            raise ValueError(packages)
         for name, fullname in splited.items():
             package = packages.get(name, {})
             if name in packages:
