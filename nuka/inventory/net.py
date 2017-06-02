@@ -109,8 +109,9 @@ def update_inventory(inventory):
             if name == 'lo':
                 continue
             d = ifaces.setdefault(name, {
-                'index': libc.if_nametoindex(name),
+                'index': libc.if_nametoindex(ifa.ifa_name),
                 'primary': False,
+                'name': name,
             })
             for family, addr in getinfos(ifa):
                 if addr:

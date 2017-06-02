@@ -18,6 +18,7 @@
 import time
 import shlex
 import asyncio
+from operator import itemgetter
 from collections import deque
 from collections import OrderedDict
 
@@ -143,11 +144,13 @@ class BaseHost(object):
 
     def _get_best_addresses(self, public=True):
         hvars = self.vars
+        key = public and 'public_ip' or 'private_ip'
         try:
-            return hvars[public and 'public_ip' or 'private_ip']
+            return hvars[key]
         except KeyError:
             pass
-        for iface in hvars.get('inventory', {}).get('ifaces', {}).values():
+        ifaces = hvars.get('inventory', {}).get('ifaces', {})
+        for iface in sorted(ifaces.values(), key=itemgetter('index')):
             if not iface['macadress']:
                 # tunX
                 continue
@@ -161,19 +164,17 @@ class BaseHost(object):
                     hvars['public_ip'] = net['address']
                 elif net['is_private'] and 'private_ip' not in hvars:
                     hvars['private_ip'] = net['address']
-        if public:
-            return hvars.get('public_ip', hvars.get('private_ip'))
-        return hvars.get('private_ip', hvars.get('public_ip'))
+        return hvars.get(key)
 
     @property
     def public_ip(self):
         """return host's public ip"""
-        return self._get_best_addresses()
+        return self._get_best_addresses(public=True)
 
     @property
     def private_ip(self):
         """return host's private ip"""
-        return self._get_best_addresses()
+        return self._get_best_addresses(public=False)
 
     def __getattr__(self, attr):
         return self.vars[attr]
