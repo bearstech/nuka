@@ -293,7 +293,10 @@ class Task(Base, RemoteTask):
             switch_ssh_user=self.switch_ssh_user)
 
         # send stdin
-        stdin = utils.proto_dumps_std(stdin_data, proc.stdin)
+        zlib_avalaible = self.host.inventory['python']['zlib_available']
+        stdin = utils.proto_dumps_std(
+            stdin_data, proc.stdin,
+            content_type=zlib_avalaible and 'zlib' or 'plain')
         await proc.stdin.drain()
 
         res = {}

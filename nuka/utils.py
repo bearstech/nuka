@@ -31,6 +31,7 @@ import logging
 import threading
 import subprocess
 
+
 _write_lock = threading.Lock()
 
 PY3 = sys.version_info[0] == 3
@@ -40,6 +41,11 @@ if not PY3:
         return o.next()
 _next = next
 
+
+try:
+    import zlib
+except ImportError:
+    zlib = None
 
 try:
     import ujson as json
@@ -214,26 +220,34 @@ class secret(object):
         return next(self.iterator)
 
 
-def proto_dumps(data):
+def proto_dumps(data, content_type=u'plain'):
     """json.dumps() with headers. py2/3 compat"""
     data = json.dumps(data)
     if not isinstance(data, bytes):
         data = data.encode('utf8')
-    header = u'Content-Length: {0}\n'.format(len(data)).encode('utf8')
-    return header + data
+    if content_type == u'zlib':
+        if zlib is not None:
+            data = zlib.compress(data)
+        else:
+            content_type = u'plain'
+    headers = (
+        u'Content-type: {0}\nContent-Length: {1}\n'
+    ).format(content_type, len(data)).encode('utf8')
+    return headers + data
 
 
-def proto_dumps_std(data, std):
+def proto_dumps_std(data, std, content_type='plain'):
     """json.dumps() to std with headers. py2/3 compat"""
-    data = proto_dumps(data)
+    data = proto_dumps(data, content_type=content_type)
     std = getattr(std, 'buffer', std)
     std.write(data)
 
 
 def proto_dumps_std_threadsafe(data, std):
     _write_lock.acquire()
+    content_type = zlib is None and u'plain' or u'zlib'
     try:
-        proto_dumps_std(data, std)
+        proto_dumps_std(data, std, content_type=content_type)
         std.flush()
     finally:
         _write_lock.release()
@@ -246,13 +260,23 @@ def proto_loads_std(std):
         std.seek(0)
     else:
         std = getattr(std, 'buffer', std)
-    header = std.readline()
-    length = header.split(b': ')
+    content_type = std.readline()
+    if isinstance(content_type, bytes):
+        content_type = content_type.decode('utf8')
     try:
-        length = int(length[1].strip())
+        content_type = content_type.split(':')[1].strip()
     except IndexError:
-        raise ValueError(length)
-    data = std.read(length)
+        raise ValueError(content_type)
+    content_length = std.readline()
+    if isinstance(content_length, bytes):
+        content_length = content_length.decode('utf8')
+    try:
+        content_length = int(content_length.split(':')[1].strip())
+    except IndexError:
+        raise ValueError(content_length)
+    data = std.read(content_length)
+    if content_type == 'zlib':
+        data = zlib.decompress(data)
     if isinstance(data, bytes):
         data = data.decode('utf8')
     try:

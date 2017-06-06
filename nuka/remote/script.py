@@ -30,7 +30,11 @@ from nuka import utils
 def main(data=None):
 
     if data is None:
-        data = utils.proto_loads_std(Task.stdin)
+        try:
+            data = utils.proto_loads_std(Task.stdin)
+        except Exception:
+            res = dict(rc=1, exc=Task.format_exception())
+            Task.exit(res)
         if 'environ' in data:
             os.environ.update(data['environ'])
         tempfile.tempdir = data['remote_tmp']

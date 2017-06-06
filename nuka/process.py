@@ -19,6 +19,7 @@ from asyncio import subprocess
 from asyncio import streams
 import asyncio
 import time
+import zlib
 import os
 
 from nuka import utils
@@ -44,18 +45,25 @@ class Process(subprocess.Process):
     async def next_message(self):
         try:
             self.read_task = self._loop.create_task(self.stdout.readline())
-            header = await self.read_task
+            content_type = await self.read_task
+            self.read_task = self._loop.create_task(self.stdout.readline())
+            content_length = await self.read_task
         except asyncio.CancelledError:
             raise
         else:
+            headers = (content_type or b'') + (content_length or b'')
             self.read_task = None
-            length = header.split(b': ')
             try:
-                l = int(length[1].strip())
+                if isinstance(content_type, bytes):
+                    content_type = content_type.decode('utf8')
+                content_type = content_type.split(':')[1].strip()
+                if isinstance(content_length, bytes):
+                    content_length = content_length.decode('utf8')
+                content_length = int(content_length.split(':')[1].strip())
             except IndexError:
                 stdout = await self.stdout.read()
-                if stdout or header:
-                    print((header, stdout))
+                if stdout or headers:
+                    print((headers, stdout))
                 stderr = await self.stderr.read()
                 if stderr:
                     stderr = stderr.decode('utf8')
@@ -69,15 +77,17 @@ class Process(subprocess.Process):
                         exc = LookupError
                     raise exc(stderr)
                 else:
-                    raise ValueError((length, stderr))
+                    raise ValueError((content_length, stderr))
             data = b''
-            while len(data) < l:
+            while len(data) < content_length:
                 try:
-                    coro = self.stdout.read(l - len(data))
+                    coro = self.stdout.read(content_length - len(data))
                     self.read_task = self._loop.create_task(coro)
                     data += await self.read_task
                 except asyncio.CancelledError:
                     raise
+            if content_type == 'zlib':
+                data = zlib.decompress(data)
             data = data.decode('utf8')
             try:
                 data = utils.json.loads(data)
