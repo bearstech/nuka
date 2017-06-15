@@ -160,7 +160,6 @@ class Host(base.Host):
                 time.sleep(20)
                 wait = 15
                 while node.status not in ('ACTIVE',):
-                    print(node.is_loaded(), node.status)
                     try:
                         node = driver.servers.find(name=self.hostname)
                     except NotFound:
@@ -171,15 +170,15 @@ class Host(base.Host):
                         break
                     else:
                         wait = (wait - 5) or 2
-                        time.sleep(wait)
+                        time.sleep(wait or 2)
                 self._node = node
             else:
                 self._node = driver.create_node(**args)
             self.log.warning('Node {0} created'.format(self))
 
     def get_create_node_args(self, driver=None, task=None):
-        node_args = nuka.config[self.provider.lower()]['create_node_args']
-        node_args = node_args.copy()
+        provider_args = nuka.config.get(self.provider.lower(), {})
+        node_args = provider_args.get('create_node_args', {}).copy()
         node_args.update(self.vars.get('create_node_args'))
         self.log.debug4(nuka.utils.json.dumps(node_args, indent=2))
         return node_args
@@ -238,6 +237,8 @@ class OpenstackHost(Host):
     @property
     def public_ip(self):
         """return host's public ip"""
+        if 'public_ip' in self.vars:
+            return self.vars['public_ip']
         for iface in self.node.interface_list():
             for addr in iface.fixed_ips:
                 ip = addr['ip_address']
@@ -247,11 +248,13 @@ class OpenstackHost(Host):
                     continue
                 else:
                     if not a.is_private:
+                        self.vars['public_ip'] = ip
+                        self.vars['private_ip'] = ip
                         return ip
 
     @property
     def private_ip(self):
-        raise NotImplementedError()
+        return self.public_ip
 
     def get_create_node_args(self, driver=None, task=None):
         node_args = super().get_create_node_args(driver=driver, task=task)
@@ -264,7 +267,7 @@ class OpenstackHost(Host):
                 for line in fd:
                     keys_list.append(line.strip())
         if keys_list:
-            driver = driver_from_config(self.provider)
+            driver = driver_from_config(self.provider, **self.driver_args)
             keypairs = [k for k in driver.keypairs.list() if k.name == 'ops']
             if not keypairs:
                 driver.keypairs.create(
