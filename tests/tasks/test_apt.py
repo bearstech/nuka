@@ -59,6 +59,3 @@ async def test_install_diff(host, diff_mode):
         res = await apt.install(packages=['moreutils'])
         assert res.rc == 0
         assert '+moreutils\n' in res.res['diff'], res.res['diff']
-        res = await apt.install(packages=['python/other-source'])
-        assert res.rc == 0
-        assert '+python/other-source\n' in res.res['diff'], res.res['diff']
