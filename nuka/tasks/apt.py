@@ -215,19 +215,20 @@ class install(Task):
                 package[key.lower()] = value
             elif sline.startswith('***'):
                 source = sline.split()[-1] + ' '
+                if source.startswith('0'):
+                    package['source'] = splited[package['name']]
+                    source = None
             elif source and sline.startswith(source):
                 package['source'] = sline
                 source = None
         installed = []
-        if 'python/jessie' in splited.values():
-            raise ValueError(packages)
         for name, fullname in splited.items():
             package = packages.get(name, {})
             if name in packages:
                 if package.get('installed'):
                     if '/' in fullname:
                         name, source = fullname.split('/', 1)
-                        if source + '/' in package.get('source', ''):
+                        if source in package.get('source', ''):
                             installed.append(fullname)
                     else:
                         installed.append(fullname)
