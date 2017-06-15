@@ -113,7 +113,7 @@ class Process(subprocess.Process):
             # cancel read if the process fail
             if self.read_task is not None:
                 if not self.read_task.done():
-                    self.read_task.cancel()
+                    self.read_task.set_result('')
             # ensure fd are closed
             for i in (0, 1, 2):
                 self._transport.get_pipe_transport(i).close()
