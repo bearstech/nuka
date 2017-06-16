@@ -165,8 +165,8 @@ class Host(base.Host):
                     except NotFound:
                         pass
                     if node.status in ('ACTIVE',):
-                        # final wait
-                        time.sleep(5)
+                        # need to wait ~10s to get the server up & running
+                        time.sleep(10)
                         break
                     else:
                         wait = (wait - 5)
@@ -325,14 +325,15 @@ class Cloud(base.HostGroup):
     def driver(self):
         return driver_from_config(self.provider, **self.driver_args)
 
+    @property
     def cached_list_nodes(self):
         cls = self.__class__
         if not self._nodes:
             cls._list_lock.acquire()
             if self.provider in nova_providers:
-                self._nodes = self.driver.servers.list()
+                self._nodes = {n.name: n for n in self.driver.servers.list()}
             else:
-                self._nodes = self.driver.list_nodes()
+                self._nodes = {n.name: n for n in self.driver.list_nodes()}
             cls._list_lock.release()
         return self._nodes
 
@@ -346,13 +347,14 @@ class Cloud(base.HostGroup):
         kwargs.setdefault('create', self.create)
         kwargs['driver_args'] = self.driver_args
         if hostname not in self:
+            kwargs.setdefault('node', self._nodes.get(hostname))
             self[hostname] = self.host_class(hostname=hostname, **kwargs)
         return self[hostname]
 
     def get_node(self, hostname, **kwargs):
         """Return a Host. Create it if needed"""
         kwargs['create'] = False
-        host_node = None
+        host_node = self._nodes.get(hostname)
         return self.get_or_create_node(hostname, node=host_node, **kwargs)
 
     def from_compose(self, project_name=None, filename='docker-compose.yml'):
@@ -374,7 +376,7 @@ class Cloud(base.HostGroup):
     async def destroy(self):
         """Destroy all hosts in the group"""
         nodes = []
-        for node in self.cached_list_nodes():
+        for node in self.cached_list_nodes.values():
             if node.name in self:
                 nodes.append(node)
                 self[node.name].log.info('destroy()')
@@ -398,6 +400,6 @@ class Cloud(base.HostGroup):
 def get_cloud(provider=Provider.GCE):
     """return a :class:`nuka.hosts.Cloud` filled with all instanciated hosts"""
     cloud = Cloud(provider=provider)
-    for node in cloud.cached_list_nodes():
+    for node in cloud.cached_list_nodes.values():
         cloud.get_or_create_node(node.name, node=node)
     return cloud
