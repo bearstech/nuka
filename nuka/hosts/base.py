@@ -121,7 +121,7 @@ class BaseHost(object):
         return [t for t in self._tasks if t.running()]
 
     def timeit(self, task=None, **kwargs):
-        return TimeIt(self, task=None, **kwargs)
+        return TimeIt(self, task=task, **kwargs)
 
     def add_time(self, start=None, task=None, **kwargs):
         kwargs.setdefault('time', time.time() - start)

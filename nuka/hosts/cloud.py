@@ -166,11 +166,13 @@ class Host(base.Host):
                         pass
                     if node.status in ('ACTIVE',):
                         # final wait
-                        time.sleep(3)
+                        time.sleep(5)
                         break
                     else:
-                        wait = (wait - 5) or 2
-                        time.sleep(wait or 2)
+                        wait = (wait - 5)
+                        if wait < 1:
+                            wait = 2
+                        time.sleep(wait)
                 self._node = node
             else:
                 self._node = driver.create_node(**args)
@@ -234,11 +236,7 @@ class OpenstackHost(Host):
     use_sudo = True
     provider = Provider.OPENSTACK
 
-    @property
-    def public_ip(self):
-        """return host's public ip"""
-        if 'public_ip' in self.vars:
-            return self.vars['public_ip']
+    def _set_ips(self):
         for iface in self.node.interface_list():
             for addr in iface.fixed_ips:
                 ip = addr['ip_address']
@@ -248,13 +246,27 @@ class OpenstackHost(Host):
                     continue
                 else:
                     if not a.is_private:
-                        self.vars['public_ip'] = ip
-                        self.vars['private_ip'] = ip
-                        return ip
+                        if 'public_ip' not in self.vars:
+                            self.vars['public_ip'] = ip
+                    else:
+                        if 'private_ip' not in self.vars:
+                            self.vars['private_ip'] = ip
+        if 'private_ip' not in self.vars:
+            # we may not have a private net
+            self.vars['private_ip'] = self.vars['public_ip']
+
+    @property
+    def public_ip(self):
+        """return host's public ip"""
+        if 'public_ip' not in self.vars:
+            self._set_ips()
+        return self.vars['public_ip']
 
     @property
     def private_ip(self):
-        return self.public_ip
+        if 'private_ip' not in self.vars:
+            self._set_ips()
+        return self.vars['private_ip']
 
     def get_create_node_args(self, driver=None, task=None):
         node_args = super().get_create_node_args(driver=driver, task=task)
