@@ -129,9 +129,13 @@ class DockerContainer(BaseHost):
 
     @property
     def private_ip(self):
-        container = self.vars['container']
-        net = list(container['NetworkSettings']['Networks'].values())[0]
-        return net['IPAddress']
+        if 'private_ip' not in self.vars:
+            container = self.vars['container']
+            net = list(container['NetworkSettings']['Networks'].values())[0]
+            ip = net['IPAddress']
+            # containers has no public ip
+            self.vars['public_ip'] = self.vars['private_ip'] = ip
+        return self.vars['private_ip']
 
     async def destroy(self):
         remove_container = partial(self.cli.remove_container,
