@@ -136,6 +136,7 @@ class DockerContainer(BaseHost):
             # containers has no public ip
             self.vars['public_ip'] = self.vars['private_ip'] = ip
         return self.vars['private_ip']
+    public_ip = private_ip
 
     async def destroy(self):
         remove_container = partial(self.cli.remove_container,
