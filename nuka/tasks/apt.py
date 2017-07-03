@@ -156,6 +156,19 @@ class update(Task):
         return res
 
 
+class list(Task):
+    def __init__(self, update_cache=None, **kwargs):
+        kwargs.update(update_cache=update_cache)
+        super(list, self).__init__(**kwargs)
+ 
+    def do(self):
+        update_cache = self.args.get('update_cache')
+        if update_cache is not None:
+            update(cache=update_cache).do()
+        res = self.sh(['apt-get','upgrade','-qq','-s'])
+        return res
+
+    
 class debconf_set_selections(Task):
     """debconf-set-selections"""
 
