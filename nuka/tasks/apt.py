@@ -9,7 +9,6 @@ import codecs
 from nuka.tasks import http
 from nuka.task import Task
 
-
 GPG_HEADER = b'-----BEGIN PGP PUBLIC KEY BLOCK-----'
 
 
@@ -129,7 +128,7 @@ class update(Task):
             except OSError:
                 need_update = True
             else:
-                need_update = time.time() < mtime + cache
+                need_update = time.time() > mtime + cache
         else:
             need_update = True
 
