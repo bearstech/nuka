@@ -34,7 +34,12 @@ class HostLogger(logging.Logger):
         file_level = nuka.config['log']['levels']['file_level']
         super().__init__(host, max(stream_level, file_level))
         if stream_level is not None:
-            self.addHandler(HostStreamHandler(host, level=stream_level))
+            if nuka.config['log']['quiet']:
+                filename = nuka.config['log']['stdout']
+                self.addHandler(HostFileHandler(host, level=stream_level,
+                                                filename=filename))
+            else:
+                self.addHandler(HostStreamHandler(host, level=stream_level))
         self.addHandler(HostFileHandler(host, level=file_level))
 
     def changed(self, *args, **kwargs):
@@ -66,11 +71,20 @@ class HostLogger(logging.Logger):
 
 class HostFileHandler(logging.FileHandler):
 
-    def __init__(self, host, level):
+    __rollover = False
+
+    def __init__(self, host, level, filename=None):
         self.host = host
         logdir = nuka.config['log']['dirname']
-        self.filename = os.path.join(logdir, '{0}.log'.format(host))
-        self.rollover()
+        if filename:
+            self.filename = filename
+            if not self.__rollover:
+                # if filename is specified, rollover only once during run time
+                self.__class__.__rollover = True
+                self.rollover()
+        else:
+            self.filename = os.path.join(logdir, '{0}.log'.format(host))
+            self.rollover()
         super().__init__(self.filename, 'w')
         fmt = nuka.config['log']['formats']['default']
         self.setFormatter(logging.Formatter(fmt))

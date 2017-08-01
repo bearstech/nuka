@@ -22,6 +22,8 @@ class Cli(argparse.ArgumentParser):
                           help='run in diff mode')
         self.add_argument('--verbose', '-v', action='count', default=0,
                           help='increase verbosity')
+        self.add_argument('--quiet', '-q', action='store_true', default=False,
+                          help='log to stoud.log instead of stdout')
         self.add_argument(
             '--tempdir', default=None,
             help='tempdir name to store file localy and remotly')

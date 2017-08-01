@@ -4,11 +4,7 @@ from nuka.hosts import DockerContainer
 
 from tasks.timezone import timezone
 
-host = DockerContainer(
-    hostname='debian_jessie',
-    image='debian:jessie',
-    command=['bash', '-c', 'while true; do sleep 1000000000000; done'],
-)
+host = DockerContainer(hostname='debian_jessie')
 
 
 async def change_timezone(host):

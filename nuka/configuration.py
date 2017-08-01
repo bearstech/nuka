@@ -46,11 +46,13 @@ class Config(dict):
                 os.makedirs(dirname)
 
         for name in ('log', 'reports', 'ssh'):
-            dirname = self[name]['dirname']
-            dirname = dirname.format(nuka_dir=nuka_dir)
-            self[name]['dirname'] = dirname
-            if not os.path.isdir(dirname):  # pragma: no cover
-                os.makedirs(dirname)
+            for key, value in self[name].items():
+                if isinstance(value, str):
+                    value = value.format(nuka_dir=nuka_dir)
+                    self[name][key] = value
+                    if key == 'dirname':
+                        if not os.path.isdir(value):  # pragma: no cover
+                            os.makedirs(value)
 
         # set correct path in self
         opts = self['ssh']['options']
@@ -75,6 +77,9 @@ class Config(dict):
             self['log']['levels']['stream_level'] = logging.DEBUG
             self['log']['levels']['file_level'] = logging.DEBUG
             self['log']['levels']['remote_level'] = logging.DEBUG
+
+        if args.quiet or 'quiet' not in self['log']:
+            self['log']['quiet'] = args.quiet
 
     def get_template_engine(self):
         engine = self.get('template_engine')
@@ -124,6 +129,7 @@ config['ssh'] = {
 }
 config['log'] = {
     'dirname': '{nuka_dir}/logs',
+    'stdout': '{nuka_dir}/logs/stdout.log',
     'formats': {
         'default': '%(levelname)-5.5s: %(message)s',
         'host': '%(levelname)-5.5s:{0.name:15.15}: %(message)s',
