@@ -159,15 +159,15 @@ class list(Task):
     def __init__(self, update_cache=None, **kwargs):
         kwargs.update(update_cache=update_cache)
         super(list, self).__init__(**kwargs)
- 
+
     def do(self):
         update_cache = self.args.get('update_cache')
         if update_cache is not None:
             update(cache=update_cache).do()
-        res = self.sh(['apt-get','upgrade','-qq','-s'])
+        res = self.sh(['apt-get', 'upgrade', '-qq', '-s'])
         return res
 
-    
+
 class debconf_set_selections(Task):
     """debconf-set-selections"""
 
@@ -208,8 +208,8 @@ class install(Task):
 
     def get_packages_list(self, packages):
         splited = {p.split('/', 1)[0]: p for p in packages}
-        res = self.sh(['apt-cache', 'policy'] + list(splited.keys() or []),
-                      check=False)
+        cmd = ['apt-cache', 'policy'] + ([k for k in splited.keys()] or [])
+        res = self.sh(cmd, check=False)
         package = source = None
         packages = {}
         for line in res['stdout'].split('\n'):
