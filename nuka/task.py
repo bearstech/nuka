@@ -34,7 +34,10 @@ class Base(asyncio.Future):
     def __init__(self, **kwargs):
         self.initialize(**kwargs)
         super().__init__(loop=self.host.loop)
-        self.process()
+        if self.host.cancelled():
+            self.cancel()
+        else:
+            self.process()
 
     def initialize(self, host=None,
                    switch_user=None, switch_ssh_user=None, **args):
@@ -141,7 +144,7 @@ class Base(asyncio.Future):
         """cancel a task"""
         if not self.cancelled():
             super().cancel()
-            if not self.res.get('signal'):
+            if not self.res.get('signal') and not self.host.failed():
                 # do not log cancellation if the user wanted it
                 self.log()
             if self.run_task is not None:
@@ -460,7 +463,7 @@ class setup(SetupTask):
             except LookupError as e:
                 # ssh/network error
                 self.host.log.error(e.args[0])
-                self.cancel()
+                self.host.fail(e)
                 return
             except OSError as e:
                 if i == retries:

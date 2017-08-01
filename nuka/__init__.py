@@ -119,27 +119,37 @@ def run(*coros, timeout=None):
         config['sigint'] = 0
         loop.add_signal_handler(signal.SIGINT, on_sigint)
 
+    to_run = []
+
     for coro in coros:
         host = None
         try:
             host = coro.cr_frame.f_locals.get('host')
         except:
             pass
-        if host is not None:
+        if host is not None and not host.failed():
             host.log('{0}({1})'.format(coro.__name__, host))
-    coro = asyncio.gather(*coros, loop=loop, return_exceptions=True)
+        to_run.append((host, coro))
+    coro = asyncio.gather(*[c for h, c in to_run],
+                          loop=loop, return_exceptions=True)
     coro = asyncio.wait_for(coro, loop=loop, timeout=timeout)
     try:
         results = loop.run_until_complete(coro)
     except Exception:
         raise asyncio.CancelledError()
     else:
-        for res in results:
+        res_with_exc = []
+        for (host, coro), res in zip(to_run, results):
             if isinstance(res, asyncio.CancelledError):
-                sys.exit(1)
+                if host is not None:
+                    if host.failed():
+                        res = host.failed()
+                if not isinstance(res, LookupError):
+                    sys.exit(1)
             elif isinstance(res, Exception):
                 raise res
-        return results
+            res_with_exc.append(res)
+        return res_with_exc
 
 
 def on_sigint(*args, **kwargs):

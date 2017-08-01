@@ -92,6 +92,7 @@ class BaseHost(object):
 
         self._sessions = deque()
         self._cancelled = False
+        self._failed = None
         self._start = time.time()
         self._processes = {}
         self._tasks = []
@@ -141,6 +142,14 @@ class BaseHost(object):
 
     def cancelled(self):
         return self._cancelled
+
+    def fail(self, exc):
+        if not self._failed:
+            self.cancel()
+            self._failed = exc
+
+    def failed(self):
+        return self._failed
 
     def _get_best_addresses(self, public=True):
         hvars = self.vars

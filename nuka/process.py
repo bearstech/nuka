@@ -75,7 +75,11 @@ class Process(subprocess.Process):
                         exc = LookupError
                     elif 'permission denied' in err:
                         exc = LookupError
-                    raise exc(stderr)
+                    exc = exc(stderr, self.host)
+                    if isinstance(exc, LookupError):
+                        self.host.fail(exc)
+                    raise exc
+
                 else:
                     raise ValueError((content_length, stderr))
             data = b''
@@ -105,19 +109,19 @@ class Process(subprocess.Process):
             return data
 
     async def exit(self):
-        try:
-            await self.wait()
-        except asyncio.CancelledError:
-            pass
+        if self.returncode is None:
+            try:
+                await self.wait()
+            except asyncio.CancelledError:
+                pass
         if self.returncode != 0:
-            # cancel read if the process fail
-            if self.read_task is not None:
-                if not self.read_task.done():
-                    self.read_task.set_result('')
             # ensure fd are closed
             for i in (0, 1, 2):
                 self._transport.get_pipe_transport(i).close()
-            # clean host links
+            # cancel read if the process fail
+            #if self.read_task is not None:
+            #    if not self.read_task.done():
+            #        self.read_task.set_result('')
         self.host.free_session_slot()
         self.host._processes.pop(id(self), None)
 
