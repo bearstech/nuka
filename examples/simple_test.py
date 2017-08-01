@@ -4,6 +4,8 @@ from nuka.hosts import DockerContainer
 from nuka.hosts import Host
 from nuka.tasks import shell
 
+nuka.config['ssh']['extra_options'] = ['-C', '-oStrictHostKeyChecking=yes']
+
 host1 = DockerContainer(hostname='debian_jessie')
 host2 = Host(hostname='unkownhost')
 
