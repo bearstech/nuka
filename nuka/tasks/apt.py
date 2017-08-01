@@ -208,7 +208,7 @@ class install(Task):
 
     def get_packages_list(self, packages):
         splited = {p.split('/', 1)[0]: p for p in packages}
-        cmd = ['apt-cache', 'policy'] + ([k for k in splited.keys()] or [])
+        cmd = ['apt-cache', 'policy'] + [k for k in splited.keys()]
         res = self.sh(cmd, check=False)
         package = source = None
         packages = {}
