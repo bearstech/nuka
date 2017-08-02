@@ -466,6 +466,12 @@ class setup(SetupTask):
                 self.host.fail(e)
                 return
             except OSError as e:
+                msg = e.args[0]
+                if 'gzip: stdin: unexpected end of file' in msg:
+                    msg = 'Unable to untar or unzip archive. Skipping host...'
+                    self.host.log.error(msg)
+                    self.host.fail(LookupError(msg, self.host))
+                    return
                 if i == retries:
                     self.host.log.exception('setup')
                     raise
