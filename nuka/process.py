@@ -126,7 +126,7 @@ class Process(subprocess.Process):
 async def create(cmd, host, task=None):
     if host not in HOSTS:
         HOSTS.append(host)
-        if len(host) > 100:
+        if len(HOSTS) > 100:
             # delay new connections
             await asyncio.sleep(.0001)
     await host.acquire_session_slot()
