@@ -25,6 +25,7 @@ import os
 from nuka import utils
 
 DEFAULT_LIMIT = streams._DEFAULT_LIMIT
+HOSTS = []
 
 
 class Process(subprocess.Process):
@@ -118,15 +119,16 @@ class Process(subprocess.Process):
             # ensure fd are closed
             for i in (0, 1, 2):
                 self._transport.get_pipe_transport(i).close()
-            # cancel read if the process fail
-            #if self.read_task is not None:
-            #    if not self.read_task.done():
-            #        self.read_task.set_result('')
         self.host.free_session_slot()
         self.host._processes.pop(id(self), None)
 
 
 async def create(cmd, host, task=None):
+    if host not in HOSTS:
+        HOSTS.append(host)
+        if len(host) > 100:
+            # delay new connections
+            await asyncio.sleep(.0001)
     await host.acquire_session_slot()
     host.log.debug5(cmd)
 
