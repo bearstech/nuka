@@ -156,6 +156,7 @@ class update(Task):
 
 
 class list(Task):
+    ignore_errors = True
     def __init__(self, update_cache=None, **kwargs):
         kwargs.update(update_cache=update_cache)
         super(list, self).__init__(**kwargs)
@@ -163,8 +164,10 @@ class list(Task):
     def do(self):
         update_cache = self.args.get('update_cache')
         if update_cache is not None:
-            update(cache=update_cache).do()
-        res = self.sh(['apt-get', 'upgrade', '-qq', '-s'])
+            res = update(cache=update_cache).do()
+
+        res = self.sh(['apt-get', 'upgrade', '-qq', '-s'], check=False)
+
         return res
 
 
