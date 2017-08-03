@@ -24,6 +24,9 @@ import yaml
 from nuka.utils import CHANGED
 
 
+asyncio_logger = logging.getLogger('asyncio')
+
+
 class Config(dict):
 
     def update_from_file(self, yaml_config):  # pragma: no cover
@@ -77,6 +80,9 @@ class Config(dict):
             self['log']['levels']['stream_level'] = logging.DEBUG
             self['log']['levels']['file_level'] = logging.DEBUG
             self['log']['levels']['remote_level'] = logging.DEBUG
+
+        if args.verbose < 3:
+            asyncio_logger.setLevel(logging.CRITICAL)
 
         if args.quiet or 'quiet' not in self['log']:
             self['log']['quiet'] = args.quiet
