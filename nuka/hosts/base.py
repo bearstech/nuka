@@ -45,6 +45,7 @@ class HostGroup(OrderedDict):
         return repr([k for k in self])
 
 
+_all_hosts = []  # Host instances
 all_hosts = HostGroup()
 nuka.config['all_hosts'] = all_hosts
 
@@ -236,6 +237,11 @@ class BaseHost(object):
     async def create_process(self, cmd, task=None, **kwargs):
         if self.cancelled():
             raise asyncio.CancelledError()
+        if self not in _all_hosts:
+            _all_hosts.append(self)
+            delay = nuka.config['processes']['delay']
+            if delay:
+                await asyncio.sleep(delay, loop=self.loop)
         process_cmd = self.wraps_command_line(cmd, **kwargs)
         proc = await process.create(process_cmd, self, task)
         return proc

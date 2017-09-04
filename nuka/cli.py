@@ -32,6 +32,8 @@ class Cli(argparse.ArgumentParser):
             help='directory to store logs & reports. Default: .nuka')
         self.add_argument('--debug', action='store_true', default=False,
                           help='enable asyncio debug')
+        self.add_argument('--processes-delay', '-p', type=float,
+                          help='delay first process per host')
         self.add_argument('--uvloop', action='store_true', default=False,
                           help='use uvloop as eventloop')
 

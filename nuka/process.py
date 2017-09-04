@@ -25,7 +25,6 @@ import os
 from nuka import utils
 
 DEFAULT_LIMIT = streams._DEFAULT_LIMIT
-HOSTS = []
 
 
 class Process(subprocess.Process):
@@ -124,11 +123,6 @@ class Process(subprocess.Process):
 
 
 async def create(cmd, host, task=None):
-    if host not in HOSTS:
-        HOSTS.append(host)
-        if len(HOSTS) > 100:
-            # delay new connections
-            await asyncio.sleep(.0001)
     await host.acquire_session_slot()
     host.log.debug5(cmd)
 

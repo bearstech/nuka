@@ -87,6 +87,9 @@ class Config(dict):
         if args.quiet or 'quiet' not in self['log']:
             self['log']['quiet'] = args.quiet
 
+        if args.processes_delay or 'delay' not in self['processes']:
+            self['processes']['delay'] = args.processes_delay
+
     def get_template_engine(self):
         engine = self.get('template_engine')
         if engine is None:
@@ -133,6 +136,7 @@ config['ssh'] = {
        '-oControlPath={dirname}/%r@%h:%p',
     ],
 }
+config['processes'] = {'delay': None}
 config['log'] = {
     'dirname': '{nuka_dir}/logs',
     'stdout': '{nuka_dir}/logs/stdout.log',
