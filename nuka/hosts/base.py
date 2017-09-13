@@ -284,9 +284,9 @@ class Host(BaseHost):
     """A host. Used by tasks as target"""
 
     def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         if not os.getenv('SSH_AUTH_SOCK'):
             self.log.warning('No SSH_AUTH_SOCK set. Your tasks may freeze')
-        super().__init__(*args, **kwargs)
 
     def wraps_command_line(self, cmd, **kwargs):
         ssh_user = kwargs.get('switch_ssh_user')
