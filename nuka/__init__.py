@@ -167,7 +167,9 @@ def on_sigint(*args, **kwargs):
                 all_tasks += len(tasks)
                 if tasks:
                     host.log.info('Waiting for {0}...'.format(tasks))
-            host.cancel()
+            # do not use host.cancel() because we don't want to cancel running
+            # tasks
+            host._cancelled = True
     elif config['sigint'] == 2:
         logging.warning('Killing remote processes...')
         for host in hosts:
