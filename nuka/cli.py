@@ -20,21 +20,33 @@ class Cli(argparse.ArgumentParser):
             help='yaml config file')
         self.add_argument('--diff', '-d', action='store_true', default=False,
                           help='run in diff mode')
-        self.add_argument('--verbose', '-v', action='count', default=0,
-                          help='increase verbosity')
-        self.add_argument('--quiet', '-q', action='store_true', default=False,
-                          help='log to stoud.log instead of stdout')
-        self.add_argument(
+
+        verbosity = self.add_argument_group('verbosity')
+        verbosity.add_argument('--verbose', '-v', action='count', default=0,
+                               help='increase verbosity')
+        verbosity.add_argument('--quiet', '-q',
+                               action='store_true', default=False,
+                               help='log to stoud.log instead of stdout')
+        verbosity.add_argument('--debug', action='store_true', default=False,
+                               help='enable asyncio debug')
+
+        dirs = self.add_argument_group('directories')
+        dirs.add_argument(
             '--tempdir', default=None,
             help='tempdir name to store file localy and remotly')
-        self.add_argument(
+        dirs.add_argument(
             '--nuka-dir', default=None,
             help='directory to store logs & reports. Default: .nuka')
-        self.add_argument('--debug', action='store_true', default=False,
-                          help='enable asyncio debug')
-        self.add_argument('--processes-delay', '-p', type=float,
+
+        proc = self.add_argument_group('processes')
+        proc.add_argument('--setup-attempts', type=int,
+                          metavar='N', default=10,
+                          help='number of setup attempts')
+        proc.add_argument('--processes-delay', '-p', type=float,
+                          metavar='DELAY',
                           help='delay first process per host')
-        self.add_argument('--uvloop', action='store_true', default=False,
+        misc = self.add_argument_group('misc')
+        misc.add_argument('--uvloop', action='store_true', default=False,
                           help='use uvloop as eventloop')
 
     @property

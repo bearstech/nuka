@@ -90,6 +90,8 @@ class Config(dict):
         if args.processes_delay or 'delay' not in self['processes']:
             self['processes']['delay'] = args.processes_delay
 
+        self['setup']['attempts'] = args.setup_attempts
+
     def get_template_engine(self):
         engine = self.get('template_engine')
         if engine is None:
@@ -137,6 +139,7 @@ config['ssh'] = {
     ],
 }
 config['processes'] = {'delay': None}
+config['setup'] = {'attempts': 10, 'retry_delay': 3}
 config['log'] = {
     'dirname': '{nuka_dir}/logs',
     'stdout': '{nuka_dir}/logs/stdout.log',

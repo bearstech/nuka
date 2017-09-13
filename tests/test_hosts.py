@@ -30,7 +30,7 @@ def test_host():
 
 def test_localhost():
     host = base.LocalHost()
-    assert host.wraps_command_line('ls') == ['ls']
+    assert host.wraps_command_line('ls') == ['bash', '-c', 'ls']
 
 
 @pytest.mark.asyncio

@@ -451,7 +451,7 @@ class setup(SetupTask):
         stdin = remote.build_archive(extra_classes=all_task_classes())
         host.log.debug(
             'Uploading archive ({0}kb)...'.format(int(len(stdin) / 1000)))
-        retries = 10
+        retries = config['setup']['attempts'] or 1
         for i in range(1, retries + 2):
             try:
                 proc = await self.host.create_process(cmd, task=self)
@@ -479,7 +479,7 @@ class setup(SetupTask):
                     self.host.log.warning(
                         '%s. Retry %s/%s in 3s...',
                         e.args[0], i, retries)
-                    time.sleep(3)
+                    time.sleep(config['setup']['retry_delay'])
             except:
                 self.host.log.exception('setup')
                 raise

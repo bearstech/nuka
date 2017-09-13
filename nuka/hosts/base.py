@@ -320,5 +320,5 @@ class LocalHost(BaseHost):
         super().__init__(hostname='localhost')
 
     def wraps_command_line(self, cmd, **kwargs):
-        cmd = shlex.split(cmd)
-        return cmd
+        ssh_cmd = ['bash', '-c', cmd]
+        return ssh_cmd
