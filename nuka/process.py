@@ -103,17 +103,6 @@ class BaseProcess:
                     task=self.task, meta=data['meta'])
             return data
 
-
-class Process(subprocess.Process, BaseProcess):
-
-    def __init__(self, transport, protocol, host, task, cmd, start):
-        super().__init__(transport, protocol, host.loop)
-        self.host = host
-        self.task = task
-        self.cmd = cmd
-        self.start = start
-        self.read_task = None
-
     async def exit(self):
         if self.returncode is None:
             try:
@@ -126,6 +115,17 @@ class Process(subprocess.Process, BaseProcess):
                 self._transport.get_pipe_transport(i).close()
         self.host.free_session_slot()
         self.host._processes.pop(id(self), None)
+
+
+class Process(subprocess.Process, BaseProcess):
+
+    def __init__(self, transport, protocol, host, task, cmd, start):
+        super().__init__(transport, protocol, host.loop)
+        self.host = host
+        self.task = task
+        self.cmd = cmd
+        self.start = start
+        self.read_task = None
 
 
 class SSHClientProcess(asyncssh.SSHClientProcess, BaseProcess):
@@ -143,20 +143,11 @@ class SSHClientProcess(asyncssh.SSHClientProcess, BaseProcess):
     def returncode(self):
         return self.exit_status
 
-    async def exit(self):
-        try:
-            await self.wait()
-        except asyncio.CancelledError:
-            pass
-        self.host.free_session_slot()
-        self.host._processes.pop(id(self), None)
-
 
 asyncssh_conns = {}
 
 
 async def create(cmd, host, task=None):
-    await host.acquire_session_slot()
     host.log.debug5(cmd)
 
     start = time.time()

@@ -18,6 +18,7 @@
 import os
 import time
 import asyncio
+import resource
 from operator import itemgetter
 from collections import deque
 from collections import OrderedDict
@@ -28,6 +29,8 @@ from nuka import process
 from nuka.task import wait_for_boot
 from nuka.task import get_task_from_stack
 from nuka.task import destroy as destroy_task
+
+MAX_PROCESSES = resource.getrlimit(resource.RLIMIT_NOFILE)[0] / 4
 
 
 class HostGroup(OrderedDict):
@@ -70,6 +73,7 @@ class TimeIt(object):
 class BaseHost(object):
 
     provider = None
+    processes_count = 0
     stds = dict(
         stdin=asyncio.subprocess.PIPE,
         stdout=asyncio.subprocess.PIPE,
@@ -220,19 +224,24 @@ class BaseHost(object):
         return dict(rc=0)
 
     async def acquire_session_slot(self):
+        while self.processes_count > MAX_PROCESSES:
+            self.log.debug5('wait for free fds')
+            await asyncio.sleep(.5, loop=self.loop)
         sessions = self._sessions
         l = len(sessions)
         if l >= self.max_sessions:  # pragma: no cover
             self.log.debug5('wait for a session')
             while l >= self.max_sessions:
                 if not self.cancelled():
-                    await asyncio.sleep(.2, loop=self.loop)
+                    await asyncio.sleep(.5, loop=self.loop)
                 else:
                     return sessions
                 l = len(sessions)
+        self.__class__.processes_count += 1
         sessions.append(1)
 
     def free_session_slot(self):
+        self.__class__.processes_count -= 1
         self._sessions.pop()
 
     async def create_process(self, cmd, task=None, **kwargs):
@@ -248,6 +257,7 @@ class BaseHost(object):
                 if min_time > now:
                     await asyncio.sleep(min_time - now, loop=self.loop)
         process_cmd = self.wraps_command_line(cmd, **kwargs)
+        await self.acquire_session_slot()
         proc = await process.create(process_cmd, self, task)
         return proc
 
