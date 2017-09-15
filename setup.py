@@ -39,9 +39,10 @@ setup(
     include_package_data=True,
     zip_safe=False,
     install_requires=[
+        'pyaml',
         'jinja2',
         'uvloop',
-        'pyaml',
+        'asyncssh',
     ],
     extras_require={
         'full': ['tox'] + full,

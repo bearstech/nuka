@@ -7,7 +7,7 @@ from nuka.tasks import shell
 nuka.config['ssh']['extra_options'] = ['-C', '-oStrictHostKeyChecking=yes']
 
 host1 = DockerContainer(hostname='debian_jessie')
-host2 = Host(hostname='unkownhost')
+host2 = Host(hostname='amandine.bearstech.com')
 
 
 async def echo():
@@ -15,7 +15,8 @@ async def echo():
 
 
 async def ls(host):
-    await shell.command(['ls'])
+    res = await shell.command(['ls'])
+    return res
 
 
 print(nuka.run(ls(host2)))

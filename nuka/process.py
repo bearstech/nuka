@@ -22,20 +22,14 @@ import time
 import zlib
 import os
 
+import asyncssh
+import asyncssh.misc
 from nuka import utils
 
 DEFAULT_LIMIT = streams._DEFAULT_LIMIT
 
 
-class Process(subprocess.Process):
-
-    def __init__(self, transport, protocol, host, task, cmd, start):
-        super().__init__(transport, protocol, host.loop)
-        self.host = host
-        self.task = task
-        self.cmd = cmd
-        self.start = start
-        self.read_task = None
+class BaseProcess:
 
     async def send_message(self, message, drain=True):
         utils.proto_dumps_std(message, self.stdin)
@@ -108,6 +102,17 @@ class Process(subprocess.Process):
                     task=self.task, meta=data['meta'])
             return data
 
+
+class Process(subprocess.Process, BaseProcess):
+
+    def __init__(self, transport, protocol, host, task, cmd, start):
+        super().__init__(transport, protocol, host.loop)
+        self.host = host
+        self.task = task
+        self.cmd = cmd
+        self.start = start
+        self.read_task = None
+
     async def exit(self):
         if self.returncode is None:
             try:
@@ -122,26 +127,88 @@ class Process(subprocess.Process):
         self.host._processes.pop(id(self), None)
 
 
+class SSHClientProcess(asyncssh.SSHClientProcess, BaseProcess):
+
+    def __init__(self, host, task, cmd, start):
+        super().__init__()
+        self._encoding = None
+        self.host = host
+        self.task = task
+        self.cmd = cmd
+        self.start = start
+        self.read_task = None
+
+    @property
+    def returncode(self):
+        return self.exit_status
+
+    async def exit(self):
+        try:
+            await self.wait()
+        except asyncio.CancelledError:
+            pass
+        self.host.free_session_slot()
+        self.host._processes.pop(id(self), None)
+
+
+asyncssh_conns = {}
+
+
 async def create(cmd, host, task=None):
     await host.acquire_session_slot()
     host.log.debug5(cmd)
 
     start = time.time()
 
-    def protocol_factory():
-        return subprocess.SubprocessStreamProtocol(
-            loop=host.loop, limit=DEFAULT_LIMIT)
+    if not cmd[0].startswith('ssh'):
+        def protocol_factory():
+            return subprocess.SubprocessStreamProtocol(
+                loop=host.loop, limit=DEFAULT_LIMIT)
 
-    transport, protocol = await host.loop.subprocess_exec(
-        protocol_factory,
-        *cmd,
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        preexec_fn=os.setpgrp,
-        close_fds=True)
+        transport, protocol = await host.loop.subprocess_exec(
+            protocol_factory,
+            *cmd,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            preexec_fn=os.setpgrp,
+            close_fds=True)
 
-    proc = Process(transport, protocol, host, task, cmd, start)
+        proc = Process(transport, protocol, host, task, cmd, start)
+    else:
+        def protocol_factory():
+            return SSHClientProcess(host, task, cmd, start)
+
+        # retrieve params from ssh command
+        tmp_cmd = cmd[:]
+        ssh_cmd = tmp_cmd.pop()
+        hostname = tmp_cmd.pop()
+        agent_forwarding = False
+        known_hosts = ()
+        while tmp_cmd:
+            v = tmp_cmd.pop(0)
+            if v == '-l':
+                username = tmp_cmd.pop(0)
+            elif v == '-p':
+                port = tmp_cmd.pop(0)
+            elif v == '-A':
+                agent_forwarding = True
+            elif v == '-oStrictHostKeyChecking=no':
+                known_hosts = None
+        uid = (username, host)
+        conn = asyncssh_conns.get(uid)
+        if conn is None:
+            conn, _ = await asyncssh.create_connection(
+                None, hostname, port,
+                username=username,
+                known_hosts=known_hosts,
+                agent_forwarding=agent_forwarding,
+                )
+            asyncssh_conns.setdefault(uid, conn)
+        chan, proc = await conn.create_session(
+                protocol_factory, ssh_cmd, encoding=None)
+        await proc.redirect(asyncssh.PIPE, asyncssh.PIPE, asyncssh.PIPE,
+                            DEFAULT_LIMIT)
     host._processes[id(proc)] = proc
     proc._loop.create_task(proc.exit())
 

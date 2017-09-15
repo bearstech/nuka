@@ -458,7 +458,7 @@ class setup(SetupTask):
                 proc.stdin.write(stdin)
                 await proc.stdin.drain()
                 # why do we have to close stdin with compressed tar file ?
-                proc.stdin.close()
+                proc.stdin.write_eof() #close()
                 res = await proc.next_message()
             except LookupError as e:
                 # ssh/network error
