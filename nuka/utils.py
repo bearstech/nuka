@@ -62,6 +62,11 @@ try:
 except ImportError:
     from io import StringIO  # NOQA
 
+try:
+    import importlib
+except ImportError:
+    importlib = None  # NOQA
+
 
 LOG = 60
 logging.addLevelName(LOG, 'LOG')
@@ -88,6 +93,12 @@ def default_watcher(delay=5):
                 # process is dead
                 yield
     return watcher
+
+
+def import_module(name):
+    if importlib is not None:
+        return importlib.import_module(name)
+    return __import__(name, globals(), locals(), [''])
 
 
 def makedirs(dirname, mod=None, own=None):

@@ -13,11 +13,11 @@ def exclude_pyc(info):
         return info
 
 
-def build_archive(extra_classes=[]):
+def build_archive(extra_classes=[], mode='x:gz'):
     """build a tarball with required scripts and python modules"""
     try:
-        return build_archive.archive
-    except AttributeError:
+        return build_archive.archives[mode]
+    except KeyError:
 
         modules = nuka.config['inventory_modules'][:]
         modules.extend([klass.__module__ for klass in extra_classes])
@@ -37,7 +37,7 @@ def build_archive(extra_classes=[]):
 
         nuka_dir = os.path.dirname(nuka.__file__)
         fd = io.BytesIO()
-        with tarfile.open(fileobj=fd, mode='x:gz') as tfd:
+        with tarfile.open(fileobj=fd, mode=mode) as tfd:
             for dirname in dirnames:
                 filename = dirname + '/__init__.py'
                 if filename not in filenames:
@@ -65,13 +65,19 @@ def build_archive(extra_classes=[]):
             filenames = tfd.getnames()
 
         fd.seek(0)
-        build_archive.archive = fd.read() + b'\0'
-        with open('/tmp/nuka.tar.gz', 'wb') as fd:
-            fd.write(build_archive.archive)
+        build_archive.archives[mode] = fd.read()
+        filename = '/tmp/nuka.tar.gz'
+        if mode == 'x':
+            filename = '/tmp/nuka.tar'
+        with open(filename, 'wb') as fd:
+            fd.write(build_archive.archives[mode])
 
         if nuka.cli.args.verbose > 6:
             print('tarfile({0}ko): \n - {1}'.format(
-                int(len(build_archive.archive) / 1024),
+                int(len(build_archive.archives[mode]) / 1024),
                 '\n - '.join(filenames)))
 
-        return build_archive.archive
+        return build_archive.archives[mode]
+
+
+build_archive.archives = {}

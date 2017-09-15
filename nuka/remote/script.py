@@ -21,7 +21,6 @@ import sys
 import signal
 import logging
 import tempfile
-import importlib
 
 from nuka.task import Task
 from nuka import utils
@@ -49,7 +48,7 @@ def main(data=None):
     module, klass_name = data['task']
 
     try:
-        mod = importlib.import_module(module)
+        mod = utils.import_module(module)
         task = getattr(mod, klass_name).from_dict(data)
     except Exception:
         res = dict(rc=1, exc=Task.format_exception())

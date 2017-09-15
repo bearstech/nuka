@@ -1,9 +1,9 @@
 import os
 import sys
 import codecs
-import importlib
 from nuka.task import Task
 from nuka.utils import json
+from nuka.utils import import_module
 
 
 class setup(Task):
@@ -19,7 +19,7 @@ class setup(Task):
         for name in modules:
             if name not in done:
                 done.add(name)
-                mod = importlib.import_module(name)
+                mod = import_module(name)
                 meth = getattr(mod, 'update_inventory', None)
                 if meth is not None:
                     meth(inventory)

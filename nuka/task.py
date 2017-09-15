@@ -414,7 +414,7 @@ class setup(SetupTask):
     setup_cmd = (
         '{0}rm -Rf {1[remote_tmp]}; '
         '{0}mkdir -p {1[remote_tmp]} && {0}chmod 777 {1[remote_tmp]} &&'
-        '{0}mkdir -p {1[remote_dir]} && {0}tar -C {1[remote_dir]} -xzf - && '
+        '{0}mkdir -p {1[remote_dir]} && {0}tar -xz -C {1[remote_dir]} && '
         '{0}`which python 2> /dev/null || which python3 || echo python` '
         '{1[script]} --setup'
     )
@@ -448,30 +448,44 @@ class setup(SetupTask):
         if mods:
             cmd += ' ' + ' '.join(['--inventory=' + m for m in mods])
 
-        stdin = remote.build_archive(extra_classes=all_task_classes())
-        host.log.debug(
-            'Uploading archive ({0}kb)...'.format(int(len(stdin) / 1000)))
         retries = config['setup']['attempts'] or 1
         for i in range(1, retries + 2):
             try:
-                proc = await self.host.create_process(cmd, task=self)
-                proc.stdin.write(stdin)
-                await proc.stdin.drain()
-                # why do we have to close stdin with compressed tar file ?
-                proc.stdin.write_eof() #close()
-                res = await proc.next_message()
+                for mode in self.host.vars['archive_modes']:
+                    stdin = remote.build_archive(
+                        extra_classes=all_task_classes(),
+                        mode=mode)
+                    c = cmd
+                    if mode == 'x':
+                        c = cmd.replace('tar -xz ', 'tar -x ')
+                    host.log.debug(
+                        'Uploading archive ({0}kb)...'.format(
+                            int(len(stdin) / 1000)))
+                    try:
+                        proc = await self.host.create_process(c, task=self)
+                        proc.stdin.write(stdin)
+                        await proc.stdin.drain()
+                        # why do we have to close stdin with compressed tar
+                        # file ?
+                        proc.stdin.write_eof()
+                        res = await proc.next_message()
+                        break
+                    except OSError as e:
+                        msg = e.args[0]
+                        if 'gzip: stdin:' in msg:
+                            msg = (
+                                'Unable to tar xz archive. '
+                                'Trying with non-gzip archive...'
+                            )
+                            self.host.log.warning(msg)
+                            continue
+                        raise
             except LookupError as e:
                 # ssh/network error
                 self.host.log.error(e.args[0])
                 self.host.fail(e)
                 return
             except OSError as e:
-                msg = e.args[0]
-                if 'gzip: stdin: unexpected end of file' in msg:
-                    msg = 'Unable to untar or unzip archive. Skipping host...'
-                    self.host.log.error(msg)
-                    self.host.fail(LookupError(msg, self.host))
-                    return
                 if i == retries:
                     self.host.log.exception('setup')
                     raise

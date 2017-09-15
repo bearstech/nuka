@@ -191,7 +191,7 @@ async def create(cmd, host, task=None):
                 username = tmp_cmd.pop(0)
             elif v == '-p':
                 port = tmp_cmd.pop(0)
-            elif v == '-A':
+            elif v in ('-A', '-oForwardAgent=yes'):
                 agent_forwarding = True
             elif v == '-oStrictHostKeyChecking=no':
                 known_hosts = None

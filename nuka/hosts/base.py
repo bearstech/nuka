@@ -89,6 +89,7 @@ class BaseHost(object):
         self.vars.setdefault('user', 'root')
         self.vars.setdefault('port', '22')
         self.vars.setdefault('use_sudo', False)
+        self.vars.setdefault('archive_modes', ('x:gz',))
 
         self.loop = vars.pop('loop', asyncio.get_event_loop())
 

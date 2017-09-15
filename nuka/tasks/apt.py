@@ -156,7 +156,9 @@ class update(Task):
 
 
 class list(Task):
+
     ignore_errors = True
+
     def __init__(self, update_cache=None, **kwargs):
         kwargs.update(update_cache=update_cache)
         super(list, self).__init__(**kwargs)
@@ -210,7 +212,7 @@ class install(Task):
         super(install, self).__init__(**kwargs)
 
     def get_packages_list(self, packages):
-        splited = {p.split('/', 1)[0]: p for p in packages}
+        splited = dict([(p.split('/', 1)[0], p) for p in packages])
         cmd = ['apt-cache', 'policy'] + [k for k in splited.keys()]
         res = self.sh(cmd, check=False)
         package = source = None
