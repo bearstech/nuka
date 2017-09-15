@@ -30,7 +30,9 @@ from nuka.task import wait_for_boot
 from nuka.task import get_task_from_stack
 from nuka.task import destroy as destroy_task
 
-MAX_PROCESSES = resource.getrlimit(resource.RLIMIT_NOFILE)[0] / 4
+RLIMIT_NOFILE = resource.getrlimit(resource.RLIMIT_NOFILE)[1]
+resource.setrlimit(resource.RLIMIT_NOFILE, (RLIMIT_NOFILE, RLIMIT_NOFILE))
+MAX_PROCESSES = int(RLIMIT_NOFILE / 4)
 
 
 class HostGroup(OrderedDict):
