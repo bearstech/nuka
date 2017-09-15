@@ -17,7 +17,6 @@
 
 import os
 import time
-import shlex
 import asyncio
 from operator import itemgetter
 from collections import deque
@@ -46,7 +45,7 @@ class HostGroup(OrderedDict):
         return repr([k for k in self])
 
 
-_all_hosts = []  # Host instances
+_all_hosts = {}  # Host instances
 all_hosts = HostGroup()
 nuka.config['all_hosts'] = all_hosts
 
@@ -240,10 +239,14 @@ class BaseHost(object):
         if self.cancelled():
             raise asyncio.CancelledError()
         if self not in _all_hosts:
-            _all_hosts.append(self)
+            _all_hosts[self] = None
             delay = nuka.config['processes']['delay']
             if delay:
-                await asyncio.sleep(delay, loop=self.loop)
+                now = time.time()
+                min_time = _all_hosts.setdefault('time', now) + delay
+                _all_hosts['time'] = now
+                if min_time > now:
+                    await asyncio.sleep(min_time - now, loop=self.loop)
         process_cmd = self.wraps_command_line(cmd, **kwargs)
         proc = await process.create(process_cmd, self, task)
         return proc

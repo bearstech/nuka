@@ -18,6 +18,7 @@
 from asyncio import subprocess
 from asyncio import streams
 import asyncio
+import socket
 import time
 import zlib
 import os
@@ -185,6 +186,8 @@ async def create(cmd, host, task=None):
         hostname = tmp_cmd.pop()
         agent_forwarding = False
         known_hosts = ()
+        attempts = 1
+        timeout = 924  # Default TCP Timeout on debian
         while tmp_cmd:
             v = tmp_cmd.pop(0)
             if v == '-l':
@@ -195,15 +198,39 @@ async def create(cmd, host, task=None):
                 agent_forwarding = True
             elif v == '-oStrictHostKeyChecking=no':
                 known_hosts = None
+            elif v.startswith('-oConnectionAttempts'):
+                attempts = int(v.split('=', 1)[1].strip())
+            elif v.startswith('-oConnectTimeout'):
+                timeout = int(v.split('=', 1)[1].strip())
         uid = (username, host)
         conn = asyncssh_conns.get(uid)
         if conn is None:
-            conn, _ = await asyncssh.create_connection(
-                None, hostname, port,
-                username=username,
-                known_hosts=known_hosts,
-                agent_forwarding=agent_forwarding,
-                )
+            exc = None
+            for i in range(1, attempts + 1):
+                try:
+                    conn, _ = await asyncio.wait_for(
+                        asyncssh.create_connection(
+                            None, hostname, port,
+                            username=username,
+                            known_hosts=known_hosts,
+                            agent_forwarding=agent_forwarding,
+                            ),
+                        timeout=timeout, loop=host.loop)
+                except asyncio.TimeoutError as e:
+                    host.log.warning('TimeoutError({0}) {1}/{2} '.format(
+                        timeout, i, attempts))
+
+                    asyncio.sleep(1)
+                except (OSError, socket.error) as e:
+                    exc = LookupError(e, host)
+                    break
+            if conn is None:
+                exc = LookupError(
+                    'TimeoutError({}). Retries exceeded'.format(timeout),
+                    host)
+            if exc is not None:
+                host.fail(exc)
+                raise exc
             asyncssh_conns.setdefault(uid, conn)
         chan, proc = await conn.create_session(
                 protocol_factory, ssh_cmd, encoding=None)
