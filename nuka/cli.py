@@ -46,6 +46,8 @@ class Cli(argparse.ArgumentParser):
                           metavar='DELAY',
                           help='delay first process per host')
         misc = self.add_argument_group('misc')
+        misc.add_argument('--ssh', action='store_true', default=False,
+                          help='use ssh binary instead of asyncssh')
         misc.add_argument('--uvloop', action='store_true', default=False,
                           help='use uvloop as eventloop')
 

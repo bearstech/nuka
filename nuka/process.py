@@ -25,6 +25,8 @@ import os
 
 import asyncssh
 import asyncssh.misc
+
+import nuka
 from nuka import utils
 
 DEFAULT_LIMIT = streams._DEFAULT_LIMIT
@@ -152,7 +154,7 @@ async def create(cmd, host, task=None):
 
     start = time.time()
 
-    if not cmd[0].startswith('ssh'):
+    if not cmd[0].startswith('ssh') or nuka.cli.args.ssh:
         def protocol_factory():
             return subprocess.SubprocessStreamProtocol(
                 loop=host.loop, limit=DEFAULT_LIMIT)
