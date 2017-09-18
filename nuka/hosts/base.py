@@ -242,6 +242,17 @@ class BaseHost(object):
         self.__class__.processes_count += 1
         sessions.append(1)
 
+    async def acquire_connection_slot(self):
+        if self not in _all_hosts:
+            delay = nuka.config['connections']['delay']
+            if delay:
+                now = time.time()
+                delay = (delay * len(_all_hosts))
+                min_time = _all_hosts.setdefault('time', now) + delay
+                if min_time > now:
+                    await asyncio.sleep(min_time - now, loop=self.loop)
+            _all_hosts[self] = now
+
     def free_session_slot(self):
         self.__class__.processes_count -= 1
         self._sessions.pop()
@@ -249,17 +260,7 @@ class BaseHost(object):
     async def create_process(self, cmd, task=None, **kwargs):
         if self.cancelled():
             raise asyncio.CancelledError()
-        if self not in _all_hosts:
-            _all_hosts[self] = None
-            delay = nuka.config['processes']['delay']
-            if delay:
-                now = time.time()
-                min_time = _all_hosts.setdefault('time', now) + delay
-                _all_hosts['time'] = now
-                if min_time > now:
-                    await asyncio.sleep(min_time - now, loop=self.loop)
         process_cmd = self.wraps_command_line(cmd, **kwargs)
-        await self.acquire_session_slot()
         proc = await process.create(process_cmd, self, task)
         return proc
 

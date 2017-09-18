@@ -18,7 +18,7 @@ class Cli(argparse.ArgumentParser):
             '--config', '-c', type=argparse.FileType('r'),
             required=False, default=None,
             help='yaml config file')
-        self.add_argument('--diff', '-d', action='store_true', default=False,
+        self.add_argument('--diff', action='store_true', default=False,
                           help='run in diff mode')
 
         verbosity = self.add_argument_group('verbosity')
@@ -39,12 +39,9 @@ class Cli(argparse.ArgumentParser):
             help='directory to store logs & reports. Default: .nuka')
 
         proc = self.add_argument_group('processes')
-        proc.add_argument('--setup-attempts', type=int,
-                          metavar='N', default=10,
-                          help='number of setup attempts')
-        proc.add_argument('--processes-delay', '-p', type=float,
-                          metavar='DELAY',
-                          help='delay first process per host')
+        proc.add_argument('--connections-delay', '-d', type=float,
+                          metavar='DELAY', default=.2,
+                          help='delay ssh connections. Default: 0.2')
         misc = self.add_argument_group('misc')
         misc.add_argument('--ssh', action='store_true', default=False,
                           help='use ssh binary instead of asyncssh')

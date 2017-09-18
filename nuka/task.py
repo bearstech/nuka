@@ -412,11 +412,12 @@ class setup(SetupTask):
     host"""
 
     setup_cmd = (
-        '{0}rm -Rf {1[remote_tmp]}; '
-        '{0}mkdir -p {1[remote_tmp]} && {0}chmod 777 {1[remote_tmp]} &&'
-        '{0}mkdir -p {1[remote_dir]} && {0}tar -xz -C {1[remote_dir]} && '
+        '{0}rm -Rf {2[remote_tmp]}; '
+        '{0}mkdir -p {2[remote_tmp]} && {0}chmod 777 {2[remote_tmp]} &&'
+        '{0}mkdir -p {2[remote_dir]} &&'
+        'dd bs={1} count=1 | {0}tar -xz -C {2[remote_dir]} && '
         '{0}`which python 2> /dev/null || which python3 || echo python` '
-        '{1[script]} --setup'
+        '{2[script]} --setup'
     )
 
     def __class_name__(self):
@@ -441,65 +442,43 @@ class setup(SetupTask):
         if host.use_sudo:
             sudo = '{sudo} '.format(**config)
 
-        cmd = self.setup_cmd.format(sudo, config)
+        cmd = self.setup_cmd.format(sudo, '{bytes}', config)
 
         mods = nuka.config['inventory_modules'][:]
         mods += self.host.vars.get('inventory_modules', [])
         if mods:
             cmd += ' ' + ' '.join(['--inventory=' + m for m in mods])
 
-        retries = config['setup']['attempts'] or 1
-        for i in range(1, retries + 2):
+        stdin = remote.build_archive(
+            extra_classes=all_task_classes(),
+            mode='x:gz')
+        c = cmd.format(bytes=len(stdin))
+        host.log.debug('Uploading archive ({0}kb)...'.format(
+                int(len(stdin) / 1000)))
+        proc = await self.host.create_process(c, task=self)
+        proc.stdin.write(stdin)
+        await proc.stdin.drain()
+
+        res = {}
+        while res.get('message_type') != 'exit':
+            # wait for messages
             try:
-                for mode in self.host.vars['archive_modes']:
-                    stdin = remote.build_archive(
-                        extra_classes=all_task_classes(),
-                        mode=mode)
-                    c = cmd
-                    if mode == 'x':
-                        c = cmd.replace('tar -xz ', 'tar -x ')
-                    host.log.debug(
-                        'Uploading archive ({0}kb)...'.format(
-                            int(len(stdin) / 1000)))
-                    try:
-                        proc = await self.host.create_process(c, task=self)
-                        proc.stdin.write(stdin)
-                        await proc.stdin.drain()
-                        # why do we have to close stdin with compressed tar
-                        # file ?
-                        proc.stdin.write_eof()
-                        res = await proc.next_message()
-                        break
-                    except OSError as e:
-                        msg = e.args[0]
-                        if 'gzip: stdin:' in msg:
-                            msg = (
-                                'Unable to tar xz archive. '
-                                'Trying with non-gzip archive...'
-                            )
-                            self.host.log.warning(msg)
-                            continue
-                        raise
-            except LookupError as e:
-                # ssh/network error
-                self.host.log.error(e.args[0])
-                self.host.fail(e)
-                return
-            except OSError as e:
-                if i == retries:
-                    self.host.log.exception('setup')
-                    raise
-                else:
-                    self.host.log.warning(
-                        '%s. Retry %s/%s in 3s...',
-                        e.args[0], i, retries)
-                    time.sleep(config['setup']['retry_delay'])
-            except:
-                self.host.log.exception('setup')
+                res = await proc.next_message()
+            except asyncio.CancelledError:
                 raise
+            except Exception as e:
+                self.cancel()
+                self.host.log.exception5(
+                    '{0}\n\n{1}'.format(self, stdin))
             else:
-                break
+                if res.get('message_type') == 'log':
+                    self.host.log.log(res['level'], res['msg'])
+
         self.res.update(res)
+
+        if self.res['rc'] != 0:
+            self.cancel()
+
         host.vars['inventory'] = self.res['inventory']
         for name in mods:
             mod = importlib.import_module(name)
@@ -508,6 +487,7 @@ class setup(SetupTask):
                 meth(host.vars['inventory'])
         host.log.debug(
             'Inventory:\n{0}'.format(host.vars['inventory']))
+
         if not host.fully_booted.done():
             host.fully_booted.set_result(True)
 
@@ -528,7 +508,7 @@ class teardown(SetupTask):
         if 'destroyed' not in self.host.vars:
             sudo = self.host.use_sudo and 'sudo ' or ''
             cmd = self.teardown_cmd.format(sudo, config)
-            await self.host.run_command(cmd, task=self, wait=False)
+            await self.host.run_command(cmd, task=self)
 
 
 class destroy(SetupTask):

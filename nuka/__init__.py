@@ -36,6 +36,7 @@ import uvloop
 # api
 from nuka.cli import cli
 from nuka import reports
+from nuka import process
 from nuka import utils  # NOQA / API
 from nuka.task import wait  # NOQA / API
 from nuka.task import teardown
@@ -191,6 +192,7 @@ def on_exit():
             if hosts:
                 reports.build_reports(hosts)
         executor.shutdown(wait=True)
+        process.close_connections()
         loop.close()
         dirname = config['tmp']
         if os.path.isdir(dirname):

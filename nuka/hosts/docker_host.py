@@ -60,6 +60,9 @@ class DockerContainer(BaseHost):
     async def acquire_session_slot(self):
         return
 
+    async def acquire_connection_slot(self):
+        return
+
     def free_session_slot(self):
         return
 

@@ -111,10 +111,11 @@ class BaseProcess:
                 await self.wait()
             except asyncio.CancelledError:
                 pass
-        if self.returncode != 0:
-            # ensure fd are closed
+        if getattr(self, '_transport', None):
             for i in (0, 1, 2):
                 self._transport.get_pipe_transport(i).close()
+        else:
+            self.stdin.close()
         self.host.free_session_slot()
         self.host._processes.pop(id(self), None)
 
@@ -146,20 +147,38 @@ class SSHClientProcess(asyncssh.SSHClientProcess, BaseProcess):
         return self.exit_status
 
 
-asyncssh_conns = {}
+asyncssh_connections = {}
+asyncssh_keypairs = []
+
+
+async def get_keys(loop):
+    if not asyncssh_keypairs:
+        asyncssh_keypairs[:] = [None]
+        agent_path = os.environ.get('SSH_AUTH_SOCK', None)
+        agent = await asyncssh.connect_agent(
+            agent_path, loop=loop)
+        asyncssh_keypairs[:] = await agent.get_keys()
+        agent.close()
+    elif asyncssh_keypairs == [None]:
+        while asyncssh_keypairs == [None]:
+            await asyncio.sleep(.1)
+    return asyncssh_keypairs[:]
 
 
 async def create(cmd, host, task=None):
     host.log.debug5(cmd)
+    loop = host.loop
 
     start = time.time()
 
     if not cmd[0].startswith('ssh') or nuka.cli.args.ssh:
         def protocol_factory():
             return subprocess.SubprocessStreamProtocol(
-                loop=host.loop, limit=DEFAULT_LIMIT)
+                loop=loop, limit=DEFAULT_LIMIT)
 
-        transport, protocol = await host.loop.subprocess_exec(
+        await host.acquire_connection_slot()
+        await host.acquire_session_slot()
+        transport, protocol = await loop.subprocess_exec(
             protocol_factory,
             *cmd,
             stdin=subprocess.PIPE,
@@ -196,27 +215,33 @@ async def create(cmd, host, task=None):
             elif v.startswith('-oConnectTimeout'):
                 timeout = int(v.split('=', 1)[1].strip())
         uid = (username, host)
-        conn = asyncssh_conns.get(uid)
+        conn = asyncssh_connections.get(uid)
         if conn is None:
             exc = None
+            await host.acquire_connection_slot()
+            host.log.debug5('open connection at %s', time.time())
+
             for i in range(1, attempts + 1):
                 try:
-                    conn, _ = await asyncio.wait_for(
+                    conn, client = await asyncio.wait_for(
                         asyncssh.create_connection(
                             None, hostname, port,
                             username=username,
                             known_hosts=known_hosts,
                             agent_forwarding=agent_forwarding,
+                            client_keys=await get_keys(loop),
+                            loop=loop,
                             ),
-                        timeout=timeout, loop=host.loop)
+                        timeout=timeout, loop=loop)
                 except asyncio.TimeoutError as e:
                     host.log.warning('TimeoutError({0}) {1}/{2} '.format(
                         timeout, i, attempts))
 
-                    asyncio.sleep(1)
+                    asyncio.sleep(1, loop=loop)
                 except (OSError, socket.error) as e:
                     exc = LookupError(e, host)
                     break
+
             if conn is None:
                 exc = LookupError(
                     'TimeoutError({}). Retries exceeded'.format(timeout),
@@ -224,12 +249,19 @@ async def create(cmd, host, task=None):
             if exc is not None:
                 host.fail(exc)
                 raise exc
-            asyncssh_conns.setdefault(uid, conn)
+
+            asyncssh_connections.setdefault(uid, conn)
+        await host.acquire_session_slot()
         chan, proc = await conn.create_session(
                 protocol_factory, ssh_cmd, encoding=None)
         await proc.redirect(asyncssh.PIPE, asyncssh.PIPE, asyncssh.PIPE,
                             DEFAULT_LIMIT)
     host._processes[id(proc)] = proc
-    proc._loop.create_task(proc.exit())
+    loop.create_task(proc.exit())
 
     return proc
+
+
+def close_connections():
+    for conn in asyncssh_connections.values():
+        conn.close()
