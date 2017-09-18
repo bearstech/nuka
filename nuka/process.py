@@ -218,7 +218,7 @@ async def create(cmd, host, task=None):
         conn = asyncssh_connections.get(uid)
         if conn is None:
             exc = None
-            client_keys = await get_keys()
+            client_keys = await get_keys(loop)
             await host.acquire_connection_slot()
             host.log.debug5('open connection at %s', time.time())
 
