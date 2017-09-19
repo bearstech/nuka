@@ -381,6 +381,9 @@ class SetupTask(Base):
 
     changed = False
 
+    def log(self):
+        self.host.log.debug(self)
+
     def pre_process(self):
         self.args['name'] = ''  # unamed task
 

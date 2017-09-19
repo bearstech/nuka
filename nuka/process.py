@@ -18,6 +18,7 @@
 from asyncio import subprocess
 from asyncio import streams
 import asyncio
+import random
 import socket
 import time
 import zlib
@@ -214,6 +215,7 @@ async def create(cmd, host, task=None):
                 attempts = int(v.split('=', 1)[1].strip())
             elif v.startswith('-oConnectTimeout'):
                 timeout = int(v.split('=', 1)[1].strip())
+
         uid = (username, host)
         conn = asyncssh_connections.get(uid)
         if conn is None:
@@ -234,11 +236,16 @@ async def create(cmd, host, task=None):
                             loop=loop,
                             ),
                         timeout=timeout, loop=loop)
+                    break
                 except asyncio.TimeoutError as e:
-                    host.log.warning('TimeoutError({0}) {1}/{2} '.format(
-                        timeout, i, attempts))
-
-                    asyncio.sleep(1, loop=loop)
+                    if i == attempts:
+                        host.log.error('TimeoutError({0}) exceeded '.format(
+                            timeout, i, attempts))
+                        exc = LookupError(e, host)
+                    else:
+                        host.log.info('TimeoutError({0}) {1}/{2} '.format(
+                            timeout, i, attempts))
+                        await asyncio.sleep(random.random(), loop=loop)
                 except (OSError, socket.error) as e:
                     exc = LookupError(e, host)
                     break
