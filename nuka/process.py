@@ -32,6 +32,9 @@ from nuka import utils
 
 DEFAULT_LIMIT = streams._DEFAULT_LIMIT
 
+asyncssh_connections = {}
+asyncssh_keypairs = []
+
 
 class BaseProcess:
 
@@ -132,6 +135,21 @@ class Process(subprocess.Process, BaseProcess):
         self.read_task = None
 
 
+class SSHClient(asyncssh.SSHClient):
+
+    def __init__(self, uid):
+        self.uid = uid
+        self.start = time.time()
+
+    def connection_made(self, *args, **kwargs):
+        now = time.time()
+        asyncssh_connections[self.uid]['connect'] = now - self.start
+        self.start = now
+
+    def auth_completed(self, *args, **kwargs):
+        asyncssh_connections[self.uid]['auth_time'] = time.time() - self.start
+
+
 class SSHClientProcess(asyncssh.SSHClientProcess, BaseProcess):
 
     def __init__(self, host, task, cmd, start):
@@ -148,10 +166,6 @@ class SSHClientProcess(asyncssh.SSHClientProcess, BaseProcess):
         return self.exit_status
 
 
-asyncssh_connections = {}
-asyncssh_keypairs = []
-
-
 async def get_keys(loop):
     if not asyncssh_keypairs:
         asyncssh_keypairs[:] = [None]
@@ -166,6 +180,20 @@ async def get_keys(loop):
     return asyncssh_keypairs[:]
 
 
+async def delay_connection(uid, loop):
+    if uid not in asyncssh_connections:
+        delay = nuka.config['connections']['delay']
+        now = time.time()
+        asyncssh_connections[uid] = {'now': now, 'timeouts': 0}
+        if delay:
+            delay = (delay * len(asyncssh_connections))
+            min_time = asyncssh_connections.setdefault('time', now) + delay
+            delay = min_time - now
+            if delay:
+                asyncssh_connections[uid]['delay'] = delay
+                await asyncio.sleep(delay, loop=loop)
+
+
 async def create(cmd, host, task=None):
     host.log.debug5(cmd)
     loop = host.loop
@@ -177,7 +205,6 @@ async def create(cmd, host, task=None):
             return subprocess.SubprocessStreamProtocol(
                 loop=loop, limit=DEFAULT_LIMIT)
 
-        await host.acquire_connection_slot()
         await host.acquire_session_slot()
         transport, protocol = await loop.subprocess_exec(
             protocol_factory,
@@ -217,18 +244,20 @@ async def create(cmd, host, task=None):
                 timeout = int(v.split('=', 1)[1].strip())
 
         uid = (username, host)
-        conn = asyncssh_connections.get(uid)
+        conn = asyncssh_connections.get(uid, {}).get('conn')
         if conn is None:
             exc = None
             client_keys = await get_keys(loop)
-            await host.acquire_connection_slot()
-            host.log.debug5('open connection at %s', time.time())
+            await delay_connection(uid, loop)
 
             for i in range(1, attempts + 1):
+                host.log.debug5('open connection {0}/{1} at {2}'.format(
+                                i, attempts, time.time()))
                 try:
                     conn, client = await asyncio.wait_for(
                         asyncssh.create_connection(
-                            None, hostname, port,
+                            lambda: SSHClient(uid),
+                            hostname, port,
                             username=username,
                             known_hosts=known_hosts,
                             agent_forwarding=agent_forwarding,
@@ -238,27 +267,23 @@ async def create(cmd, host, task=None):
                         timeout=timeout, loop=loop)
                     break
                 except asyncio.TimeoutError as e:
+                    timeouts = asyncssh_connections[uid]['timeouts']
+                    asyncssh_connections[uid]['timeouts'] = timeouts + 1
                     if i == attempts:
                         host.log.error('TimeoutError({0}) exceeded '.format(
                             timeout, i, attempts))
                         exc = LookupError(e, host)
                     else:
-                        host.log.info('TimeoutError({0}) {1}/{2} '.format(
-                            timeout, i, attempts))
-                        await asyncio.sleep(random.random(), loop=loop)
+                        await asyncio.sleep(1 + random.random(), loop=loop)
                 except (OSError, socket.error) as e:
                     exc = LookupError(e, host)
                     break
 
-            if conn is None:
-                exc = LookupError(
-                    'TimeoutError({}). Retries exceeded'.format(timeout),
-                    host)
             if exc is not None:
                 host.fail(exc)
                 raise exc
 
-            asyncssh_connections.setdefault(uid, conn)
+            asyncssh_connections[uid]['conn'] = conn
         await host.acquire_session_slot()
         chan, proc = await conn.create_session(
                 protocol_factory, ssh_cmd, encoding=None)
@@ -271,5 +296,7 @@ async def create(cmd, host, task=None):
 
 
 def close_connections():
-    for conn in asyncssh_connections.values():
-        conn.close()
+    for d in asyncssh_connections.values():
+        if isinstance(d, dict):
+            if 'conn' in d:
+                d['conn'].close()

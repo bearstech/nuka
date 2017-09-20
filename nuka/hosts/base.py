@@ -50,7 +50,6 @@ class HostGroup(OrderedDict):
         return repr([k for k in self])
 
 
-_all_hosts = {}  # Host instances
 all_hosts = HostGroup()
 nuka.config['all_hosts'] = all_hosts
 
@@ -241,17 +240,6 @@ class BaseHost(object):
                 l = len(sessions)
         self.__class__.processes_count += 1
         sessions.append(1)
-
-    async def acquire_connection_slot(self):
-        if self not in _all_hosts:
-            delay = nuka.config['connections']['delay']
-            if delay:
-                now = time.time()
-                delay = (delay * len(_all_hosts))
-                min_time = _all_hosts.setdefault('time', now) + delay
-                if min_time > now:
-                    await asyncio.sleep(min_time - now, loop=self.loop)
-            _all_hosts[self] = now
 
     def free_session_slot(self):
         self.__class__.processes_count -= 1
