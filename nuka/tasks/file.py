@@ -175,7 +175,7 @@ class put(Task):
                 src = fd['src']
                 if src.startswith('~/'):
                     fd['src'] = os.path.expanduser(src)
-                if src.endswith('.j2'):
+                if src.endswith(('.j2', '.j2.gpg')):
                     self.render_template(fd)
                 else:
                     self.render_file(fd)

@@ -26,6 +26,7 @@ from nuka.remote.task import RemoteTask
 from nuka.configuration import config
 from nuka import remote
 from nuka import utils
+from nuka import gpg
 import nuka
 
 
@@ -131,8 +132,11 @@ class Base(asyncio.Future):
             {'src': path, 'dst': path}
         """
         src = fd['src']
-        with codecs.open(src, 'r', 'utf8') as fd_:
-            data = fd_.read()
+        if src.endswith('.gpg'):
+            _, data = gpg.decrypt(src, 'utf8')
+        else:
+            with codecs.open(src, 'r', 'utf8') as fd_:
+                data = fd_.read()
         fd['data'] = data
         if 'executable' not in fd:
             fd['executable'] = utils.isexecutable(src)

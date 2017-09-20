@@ -22,6 +22,7 @@ import jinja2
 import yaml
 
 from nuka.utils import CHANGED
+from nuka.gpg import FileSystemLoader
 
 
 asyncio_logger = logging.getLogger('asyncio')
@@ -101,7 +102,7 @@ class Config(dict):
             elif os.getcwd() not in templates:
                 templates.insert(0, os.getcwd())
             loader = jinja2.ChoiceLoader([
-                jinja2.FileSystemLoader(p) for p in templates
+                FileSystemLoader(p) for p in templates
             ] + [jinja2.PackageLoader('nuka')])
             self['template_engine'] = jinja2.Environment(
                 loader=loader,
