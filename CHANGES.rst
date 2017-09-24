@@ -1,4 +1,4 @@
-0.2 (unreleased)
+0.2 (2017-09-24)
 ================
 
 - remote py26 support
