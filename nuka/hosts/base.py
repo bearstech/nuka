@@ -167,7 +167,7 @@ class BaseHost(object):
             pass
         ifaces = hvars.get('inventory', {}).get('ifaces', {})
         for iface in sorted(ifaces.values(), key=itemgetter('index')):
-            if not iface.get('macadress'):
+            if not iface.get('macaddress'):
                 # tunX
                 continue
             for net in iface.get('inet', []):
