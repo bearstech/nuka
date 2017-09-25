@@ -122,7 +122,7 @@ def update_inventory(inventory):
                     filename = '/sys/class/net/{0}/address'.format(name)
                     if os.path.isfile(filename):
                         with codecs.open(filename, 'r', 'utf8') as fd:
-                            d['macadress'] = fd.read().strip() or None
+                            d['macaddress'] = fd.read().strip() or None
         return ifaces
     finally:
         libc.freeifaddrs(ifap)
