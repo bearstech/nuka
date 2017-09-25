@@ -22,6 +22,8 @@ import asyncio
 import logging
 import importlib
 
+import asyncssh.misc
+
 from nuka.remote.task import RemoteTask
 from nuka.configuration import config
 from nuka import remote
@@ -462,9 +464,17 @@ class setup(SetupTask):
         c = cmd.format(bytes=len(stdin))
         host.log.debug('Uploading archive ({0}kb)...'.format(
                 int(len(stdin) / 1000)))
-        proc = await self.host.create_process(c, task=self)
-        proc.stdin.write(stdin)
-        await proc.stdin.drain()
+
+        try:
+            proc = await self.host.create_process(c, task=self)
+            proc.stdin.write(stdin)
+            await proc.stdin.drain()
+        except (OSError, asyncssh.misc.Error) as e:
+            if isinstance(e, asyncssh.misc.Error):
+                e = LookupError(str(e), self.host)
+            self.host.log.error(e.args[0])
+            self.host.fail(e)
+            return
 
         res = {}
         while res.get('message_type') != 'exit':
@@ -473,6 +483,10 @@ class setup(SetupTask):
                 res = await proc.next_message()
             except asyncio.CancelledError:
                 raise
+            except LookupError as e:
+                self.host.log.error(e.args[0])
+                self.host.fail(e)
+                return
             except Exception as e:
                 self.cancel()
                 self.host.log.exception5(
