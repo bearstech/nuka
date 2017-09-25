@@ -100,8 +100,11 @@ class source(Task):
         src = self.args['src'].strip()
         src += '\n'
         dst = os.path.join('/etc/apt/sources.list.d', name + '.list')
-        with codecs.open(dst, 'r', 'utf8') as fd:
-            old_data = fd.read()
+        if os.path.isfile(dst):
+            with codecs.open(dst, 'r', 'utf8') as fd:
+                old_data = fd.read()
+        else:
+            old_data = ''
         if old_data != src:
             diff = self.texts_diff(old_data, src, fromfile=dst)
         else:
