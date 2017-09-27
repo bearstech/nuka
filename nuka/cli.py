@@ -7,24 +7,21 @@ from nuka.configuration import config
 class Cli(argparse.ArgumentParser):
 
     def __init__(self, *args, **kwargs):
+        kwargs['add_help'] = True
         super().__init__(*args, **kwargs)
         self.finalized = False
         self.args = None
         self.add_argument(
-            '--help', '-h', action='store_true',
-            required=False, default=False,
-            help='show this help and exit')
-        self.add_argument(
-            '--config', '-c', type=argparse.FileType('r'),
+            '-c', '--config', type=argparse.FileType('r'),
             required=False, default=None,
             help='yaml config file')
         self.add_argument('--diff', action='store_true', default=False,
                           help='run in diff mode')
 
         verbosity = self.add_argument_group('verbosity')
-        verbosity.add_argument('--verbose', '-v', action='count', default=0,
+        verbosity.add_argument('-v', '--verbose', action='count', default=0,
                                help='increase verbosity')
-        verbosity.add_argument('--quiet', '-q',
+        verbosity.add_argument('-q', '--quiet',
                                action='store_true', default=False,
                                help='log to stoud.log instead of stdout')
         verbosity.add_argument('--debug', action='store_true', default=False,
@@ -39,7 +36,7 @@ class Cli(argparse.ArgumentParser):
             help='directory to store logs & reports. Default: .nuka')
 
         proc = self.add_argument_group('processes')
-        proc.add_argument('--connections-delay', '-d', type=float,
+        proc.add_argument('-d', '--connections-delay', type=float,
                           metavar='DELAY', default=.2,
                           help='delay ssh connections. Default: 0.2')
         misc = self.add_argument_group('misc')
@@ -56,15 +53,15 @@ class Cli(argparse.ArgumentParser):
         self.args, argv = super().parse_known_args(*args, **kwargs)
         return self.args, argv
 
+    def print_help(self):
+        # Ignore warnings like:
+        # sys:1: RuntimeWarning: coroutine 'do_something' was never awaited
+        import warnings
+        warnings.simplefilter("ignore")
+        super().print_help()
+
     def parse_args(self, *args, **kwargs):
         self.args = super().parse_args(*args, **kwargs)
-        if self.args.help:
-            self.print_help()
-            # Ignore warnings like:
-            # sys:1: RuntimeWarning: coroutine 'do_something' was never awaited
-            import warnings
-            warnings.simplefilter("ignore")
-            sys.exit(0)
         if self.args.config:
             config.update_from_file(self.args.config)
         config.finalize(self.args)

@@ -469,7 +469,7 @@ class setup(SetupTask):
             proc = await self.host.create_process(c, task=self)
             proc.stdin.write(stdin)
             await proc.stdin.drain()
-        except (OSError, asyncssh.misc.Error) as e:
+        except (LookupError, asyncssh.misc.Error) as e:
             if isinstance(e, asyncssh.misc.Error):
                 e = LookupError(str(e), self.host)
             self.host.log.error(e.args[0])
