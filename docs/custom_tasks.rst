@@ -1,4 +1,4 @@
-Use you own tasks
+Use your own tasks
 ==================
 
 nuka's tasks are just python class that inherit from :class:`nuka.task.Task`.
