@@ -182,7 +182,7 @@ def on_sigint(*args, **kwargs):
 
 
 def on_exit():
-    if cli.finalized and not cli.args.help:
+    if cli.finalized and not cli.help:
         if 'all_hosts' in config and 'remote_dir' in config:
             hosts = config['all_hosts'].values()
             hosts = [h for h in hosts if h._tasks]

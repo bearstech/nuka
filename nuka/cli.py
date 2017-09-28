@@ -11,6 +11,7 @@ class Cli(argparse.ArgumentParser):
         super().__init__(*args, **kwargs)
         self.finalized = False
         self.args = None
+        self.help = None
         self.add_argument(
             '-c', '--config', type=argparse.FileType('r'),
             required=False, default=None,
@@ -54,6 +55,7 @@ class Cli(argparse.ArgumentParser):
         return self.args, argv
 
     def print_help(self):
+        self.help = True
         # Ignore warnings like:
         # sys:1: RuntimeWarning: coroutine 'do_something' was never awaited
         import warnings
