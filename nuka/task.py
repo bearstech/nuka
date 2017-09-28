@@ -257,7 +257,6 @@ class Task(Base, RemoteTask):
         The remote script will deserialize the task and run
         :meth:`~nuka.remote.task.Task.do` (or diff() when using --diff)
         """
-
         self.host.log.debug(self)
         diff_mode = self.args.get('diff_mode', nuka.cli.args.diff)
         klass = self.__class__
@@ -526,7 +525,7 @@ class teardown(SetupTask):
         return 'teardown'
 
     async def run(self):
-        if 'destroyed' not in self.host.vars:
+        if not self.host.failed():
             sudo = self.host.use_sudo and 'sudo ' or ''
             cmd = self.teardown_cmd.format(sudo, config)
             await self.host.run_command(cmd, task=self)

@@ -22,6 +22,7 @@ import random
 import socket
 import time
 import zlib
+import sys
 import os
 
 import asyncssh
@@ -34,6 +35,7 @@ DEFAULT_LIMIT = streams._DEFAULT_LIMIT
 
 asyncssh_connections = {}
 asyncssh_keypairs = []
+asyncssh_known_hosts = []
 
 
 class BaseProcess:
@@ -180,6 +182,13 @@ async def get_keys(loop):
     return asyncssh_keypairs[:]
 
 
+def get_known_hosts(filename):
+    if not asyncssh_known_hosts:
+        known_hosts = asyncssh.known_hosts.read_known_hosts(filename)
+        asyncssh_known_hosts[:] = [known_hosts]
+    return asyncssh_known_hosts[0]
+
+
 async def delay_connection(uid, loop):
     if uid not in asyncssh_connections:
         delay = nuka.config['connections']['delay']
@@ -242,6 +251,17 @@ async def create(cmd, host, task=None):
                 attempts = int(v.split('=', 1)[1].strip())
             elif v.startswith('-oConnectTimeout'):
                 timeout = int(v.split('=', 1)[1].strip())
+
+        if known_hosts is not None:
+            filename = os.path.expanduser('~/.ssh/known_hosts')
+            if os.path.isfile(filename):
+                try:
+                    known_hosts = get_known_hosts(filename)
+                except ValueError as e:
+                    host.log.critical(' '.join(e.args))
+                    host.log.critical('Exiting...')
+                    host.fail(e)
+                    sys.exit(1)
 
         uid = (username, host)
         conn = asyncssh_connections.get(uid, {}).get('conn')
