@@ -327,3 +327,14 @@ class LocalHost(BaseHost):
     def wraps_command_line(self, cmd, **kwargs):
         ssh_cmd = ['bash', '-c', cmd]
         return ssh_cmd
+
+
+class Chroot(BaseHost):
+
+    def __init__(self, path):
+        super().__init__(hostname=path.split('/')[-1])
+        self.path = path
+
+    def wraps_command_line(self, cmd, **kwargs):
+        ssh_cmd = ['chroot', self.path, 'bash', '-c', cmd]
+        return ssh_cmd

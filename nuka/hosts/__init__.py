@@ -34,6 +34,7 @@ Libcloud
 from .base import all_hosts  # NOQA
 from .base import Host  # NOQA
 from .base import LocalHost  # NOQA
+from .base import Chroot  # NOQA
 from .base import HostGroup  # NOQA
 from .vagrant import Vagrant  # NOQA
 
