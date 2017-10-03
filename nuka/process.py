@@ -258,10 +258,10 @@ async def create(cmd, host, task=None):
                 try:
                     known_hosts = get_known_hosts(filename)
                 except ValueError as e:
-                    host.log.critical(' '.join(e.args))
-                    host.log.critical('Exiting...')
                     host.fail(e)
-                    sys.exit(1)
+                    msg = ' '.join(e.args)
+                    nuka.config['exit_message'] = 'FATAL: ' + msg
+                    return
 
         uid = (username, host)
         conn = asyncssh_connections.get(uid, {}).get('conn')

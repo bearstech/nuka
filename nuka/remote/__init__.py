@@ -66,11 +66,6 @@ def build_archive(extra_classes=[], mode='x:gz'):
 
         fd.seek(0)
         build_archive.archives[mode] = fd.read()
-        filename = '/tmp/nuka.tar.gz'
-        if mode == 'x':
-            filename = '/tmp/nuka.tar'
-        with open(filename, 'wb') as fd:
-            fd.write(build_archive.archives[mode])
 
         if nuka.cli.args.verbose > 6:
             print('tarfile({0}ko): \n - {1}'.format(

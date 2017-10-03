@@ -197,6 +197,8 @@ def on_exit():
         dirname = config['tmp']
         if os.path.isdir(dirname):
             shutil.rmtree(dirname)
+    if 'exit_message' in config:
+        print(config['exit_message'])
 
 
 # do no use cli to parse this option sinc we need the loop early
