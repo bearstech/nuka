@@ -22,7 +22,6 @@ import random
 import socket
 import time
 import zlib
-import sys
 import os
 
 import asyncssh
@@ -34,6 +33,7 @@ from nuka import utils
 DEFAULT_LIMIT = streams._DEFAULT_LIMIT
 
 asyncssh_connections = {}
+asyncssh_connections_tasks = {}
 asyncssh_keypairs = []
 asyncssh_known_hosts = []
 
@@ -260,7 +260,7 @@ async def create(cmd, host, task=None):
                 except ValueError as e:
                     host.fail(e)
                     msg = ' '.join(e.args)
-                    nuka.config['exit_message'] = 'FATAL: ' + msg
+                    nuka.run_vars['exit_message'] = 'FATAL: ' + msg
                     return
 
         uid = (username, host)
@@ -268,13 +268,24 @@ async def create(cmd, host, task=None):
         if conn is None:
             exc = None
             client_keys = await get_keys(loop)
-            await delay_connection(uid, loop)
+            asyncssh_connections_tasks[uid] = loop.create_task(
+                delay_connection(uid, loop)
+            )
+            try:
+                await asyncssh_connections_tasks[uid]
+            except asyncio.CancelledError as e:
+                exc = LookupError(OSError('sigint'), host)
+                host.fail(exc)
+                return
 
             for i in range(1, attempts + 1):
                 host.log.debug5('open connection {0}/{1} at {2}'.format(
                                 i, attempts, time.time()))
                 try:
-                    conn, client = await asyncio.wait_for(
+                    if nuka.run_vars['sigint']:
+                        exc = LookupError(OSError('sigint'), host)
+                        break
+                    asyncssh_connections_tasks[uid] = loop.create_task(
                         asyncssh.create_connection(
                             lambda: SSHClient(uid),
                             hostname, port,
@@ -283,8 +294,14 @@ async def create(cmd, host, task=None):
                             agent_forwarding=agent_forwarding,
                             client_keys=client_keys,
                             loop=loop,
-                            ),
-                        timeout=timeout, loop=loop)
+                            )
+                        )
+                    conn, client = await asyncio.wait_for(
+                            asyncssh_connections_tasks[uid],
+                            timeout=timeout, loop=loop)
+                    break
+                except asyncio.CancelledError as e:
+                    exc = LookupError(OSError('sigint'), host)
                     break
                 except asyncio.TimeoutError as e:
                     timeouts = asyncssh_connections[uid]['timeouts']
@@ -294,14 +311,21 @@ async def create(cmd, host, task=None):
                             timeout, i, attempts))
                         exc = LookupError(e, host)
                     else:
-                        await asyncio.sleep(1 + random.random(), loop=loop)
+                        asyncssh_connections_tasks[uid] = loop.create_task(
+                            asyncio.sleep(1 + random.random(), loop=loop)
+                        )
+                        try:
+                            await asyncssh_connections_tasks[uid]
+                        except asyncio.CancelledError as e:
+                            exc = LookupError(e, host)
+                            break
                 except (OSError, socket.error) as e:
                     exc = LookupError(e, host)
                     break
 
             if exc is not None:
                 host.fail(exc)
-                raise exc
+                return
 
             asyncssh_connections[uid]['conn'] = conn
         await host.acquire_session_slot()
@@ -320,3 +344,9 @@ def close_connections():
         if isinstance(d, dict):
             if 'conn' in d:
                 d['conn'].close()
+
+
+def close_awaiting_tasks():
+    for task in asyncssh_connections_tasks.values():
+        if not task.done():
+            task.cancel()

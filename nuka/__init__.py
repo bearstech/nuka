@@ -45,6 +45,9 @@ from nuka.configuration import config
 sleep = asyncio.sleep  # NOQA / API
 
 
+run_vars = {}
+
+
 class Event(asyncio.Future):
     """A named event that you can wait:
 
@@ -116,8 +119,8 @@ def run(*coros, timeout=None):
         cli.parse_args()
 
     # register signal if not already done
-    if 'sigint' not in config:
-        config['sigint'] = 0
+    if 'sigint' not in run_vars:
+        run_vars['sigint'] = 0
         loop.add_signal_handler(signal.SIGINT, on_sigint)
 
     to_run = []
@@ -136,7 +139,7 @@ def run(*coros, timeout=None):
     coro = asyncio.wait_for(coro, loop=loop, timeout=timeout)
     try:
         results = loop.run_until_complete(coro)
-    except Exception:
+    except Exception as e:
         raise asyncio.CancelledError()
     else:
         res_with_exc = []
@@ -155,8 +158,9 @@ def run(*coros, timeout=None):
 
 def on_sigint(*args, **kwargs):
     hosts = config['all_hosts'].values()
-    config['sigint'] = config['sigint'] + 1
-    if config['sigint'] == 1:
+    run_vars['sigint'] = run_vars['sigint'] + 1
+    if run_vars['sigint'] == 1:
+        process.close_awaiting_tasks()
         logging.warning('Exiting...')
         all_tasks = 0
         for host in hosts:
@@ -171,11 +175,11 @@ def on_sigint(*args, **kwargs):
             # do not use host.cancel() because we don't want to cancel running
             # tasks
             host._cancelled = True
-    elif config['sigint'] == 2:
+    elif run_vars['sigint'] == 2:
         logging.warning('Killing remote processes...')
         for host in hosts:
             loop.create_task(host.send_messages(dict(signal='SIGINT')))
-    elif config['sigint'] > 2:
+    elif run_vars['sigint'] > 2:
         logging.warning('Exploding...')
         executor.shutdown(wait=False)
         sys.exit(1)
@@ -197,8 +201,8 @@ def on_exit():
         dirname = config['tmp']
         if os.path.isdir(dirname):
             shutil.rmtree(dirname)
-    if 'exit_message' in config:
-        print(config['exit_message'])
+    if 'exit_message' in run_vars:
+        print(run_vars['exit_message'])
 
 
 # do no use cli to parse this option sinc we need the loop early
