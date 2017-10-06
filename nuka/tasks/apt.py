@@ -204,7 +204,7 @@ class upgrade(Task):
                 to_upgrade.append(package)
             self.args['packages'] = to_upgrade
             if  self.args['packages']:
-                cmd = ['apt-get', '-y', '-o', 'Dpkg::Options::=--force-confdef', '-o', 'Dpkg::Options::=--force-confold', 'install'] + [k for k in self.args['packages']]
+                cmd = ['apt-get', '-qq', '-y', '-o', 'Dpkg::Options::=--force-confdef', '-o', 'Dpkg::Options::=--force-confold', 'install'] + [k for k in self.args['packages']]
                 res = self.sh(cmd, check=False)
             else :
                 res = dict(rc=0, stdout='no upgrade')
