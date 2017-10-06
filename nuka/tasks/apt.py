@@ -175,6 +175,43 @@ class list(Task):
 
         return res
 
+class upgrade(Task):
+
+    ignore_errors = True
+    def __init__(self, packages=None, debconf=None,
+                 debian_frontend='noninteractive',**kwargs):
+        kwargs.setdefault('name', ', '.join(packages or []))
+        kwargs.update(packages=packages, debconf=debconf,
+                      debian_frontend=debian_frontend)
+        super(upgrade, self).__init__(**kwargs)
+
+    def do(self):
+        self.sh(['rm', '/var/lib/apt/lists/partial/*'], check=False)
+        #no specific package :
+        if not self.args['packages']  :
+            res = self.sh(['apt-get', '-qq', '-y', '-o', 'Dpkg::Options::=--force-confdef', '-o', 'Dpkg::Options::=--force-confold', 'upgrade'], check=False)
+            return res 
+        else :
+            err = []
+            to_upgrade = []
+            #we check for all package it they are endeed installed
+            for package in  self.args['packages'] :
+                is_present = self.sh("dpkg-query -W {} ".format(package), shell=True, check=False)
+                if is_present['rc'] :
+                    #we don't want uninstalled package
+                    err.append(package)
+                    continue
+                to_upgrade.append(package)
+            self.args['packages'] = to_upgrade
+            if  self.args['packages']:
+                cmd = ['apt-get', '-y', '-o', 'Dpkg::Options::=--force-confdef', '-o', 'Dpkg::Options::=--force-confold', 'install'] + [k for k in self.args['packages']]
+                res = self.sh(cmd, check=False)
+            else :
+                res = dict(rc=0, stdout='no upgrade')
+            res['miss_packages']=err
+            return res
+                    #            res = self.sh(['apt-get', '-qq', '-y', '-o', 'Dpkg::Options::=--force-confdef', '-o', 'Dpkg::Options::=--force-confold', '-s', 'upgrade'], check=False)
+
 
 class debconf_set_selections(Task):
     """debconf-set-selections"""
