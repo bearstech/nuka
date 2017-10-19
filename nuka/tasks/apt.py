@@ -204,27 +204,28 @@ class upgrade(Task):
                 ], check=False, **kwargs)
             return res
         else:
-            err = []
             to_upgrade = []
+            miss_packages = []
             #  we check for all package it they are endeed installed
             for package in self.args['packages']:
-                is_present = self.sh(['dpkg-query', '-W'] + [package],
+                is_present = self.sh(['dpkg-query', '-W', package],
                                      check=False)
                 if is_present['rc']:
                     #  we don't want uninstalled package
-                    err.append(package)
+                    miss_packages.append(package)
                     continue
                 to_upgrade.append(package)
-            self.args['packages'] = to_upgrade
-            if self.args['packages']:
+            if to_upgrade:
                 cmd = ['apt-get', '-qq', '-y',
                        '-oDpkg::Options::=--force-confdef',
                        '-oDpkg::Options::=--force-confold', 'install'
-                       ] + [k for k in self.args['packages']]
+                       ] + to_upgrade
                 res = self.sh(cmd, check=False, **kwargs)
             else:
                 res = dict(rc=0, stdout='no upgrade')
-            res['miss_packages'] = err
+                res['changed'] = False
+            res['miss_packages'] = miss_packages
+            res['packages'] = to_upgrade
             return res
 
 
