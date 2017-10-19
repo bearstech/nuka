@@ -175,11 +175,13 @@ class list(Task):
 
         return res
 
+
 class upgrade(Task):
 
     ignore_errors = True
+
     def __init__(self, packages=None, debconf=None,
-                 debian_frontend='noninteractive',**kwargs):
+                 debian_frontend='noninteractive', **kwargs):
         kwargs.setdefault('name', ', '.join(packages or []))
         kwargs.update(packages=packages, debconf=debconf,
                       debian_frontend=debian_frontend)
@@ -193,30 +195,37 @@ class upgrade(Task):
             if v:
                 env[k.upper()] = v
         kwargs = {'env': env}
-        #no specific package :
-        if not self.args['packages']  :
-            res = self.sh(['apt-get', '-qq', '-y', '-o', 'Dpkg::Options::=--force-confdef', '-o', 'Dpkg::Options::=--force-confold', 'upgrade'], check=False, **kwargs)
-            return res 
-        else :
+        #  no specific package :
+        if not self.args['packages']:
+            res = self.sh([
+                'apt-get', '-qq', '-y',
+                '-oDpkg::Options::=--force-confdef',
+                '-oDpkg::Options::=--force-confold', 'upgrade'
+                ], check=False, **kwargs)
+            return res
+        else:
             err = []
             to_upgrade = []
-            #we check for all package it they are endeed installed
-            for package in  self.args['packages'] :
-                is_present = self.sh(['dpkg-query', '-W'] + [package], check=False)
-                if is_present['rc'] :
-                    #we don't want uninstalled package
+            #  we check for all package it they are endeed installed
+            for package in self.args['packages']:
+                is_present = self.sh(['dpkg-query', '-W'] + [package],
+                                     check=False)
+                if is_present['rc']:
+                    #  we don't want uninstalled package
                     err.append(package)
                     continue
                 to_upgrade.append(package)
             self.args['packages'] = to_upgrade
-            if  self.args['packages']:
-                cmd = ['apt-get', '-qq', '-y', '-o', 'Dpkg::Options::=--force-confdef', '-o', 'Dpkg::Options::=--force-confold', 'install'] + [k for k in self.args['packages']]
+            if self.args['packages']:
+                cmd = ['apt-get', '-qq', '-y',
+                       '-oDpkg::Options::=--force-confdef',
+                       '-oDpkg::Options::=--force-confold', 'install'
+                       ] + [k for k in self.args['packages']]
                 res = self.sh(cmd, check=False, **kwargs)
-            else :
+            else:
                 res = dict(rc=0, stdout='no upgrade')
-            res['miss_packages']=err
+            res['miss_packages'] = err
             return res
-                    #            res = self.sh(['apt-get', '-qq', '-y', '-o', 'Dpkg::Options::=--force-confdef', '-o', 'Dpkg::Options::=--force-confold', '-s', 'upgrade'], check=False)
 
 
 class debconf_set_selections(Task):
