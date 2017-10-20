@@ -325,7 +325,7 @@ async def create(cmd, host, task=None):
 
             if exc is not None:
                 host.fail(exc)
-                return
+                raise exc
 
             asyncssh_connections[uid]['conn'] = conn
         await host.acquire_session_slot()
