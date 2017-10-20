@@ -211,14 +211,15 @@ class upgrade(Task):
                 is_present = self.sh(['dpkg-query', '-W', package],
                                      check=False)
                 if is_present['rc']:
-                    #  we don't want uninstalled package
+                    #  we don't want installed package
                     miss_packages.append(package)
                     continue
                 to_upgrade.append(package)
             if to_upgrade:
                 cmd = ['apt-get', '-qq', '-y',
                        '-oDpkg::Options::=--force-confdef',
-                       '-oDpkg::Options::=--force-confold', 'install'
+                       '-oDpkg::Options::=--force-confold',
+                       '--only-upgrade', 'install'
                        ] + to_upgrade
                 res = self.sh(cmd, check=False, **kwargs)
             else:
