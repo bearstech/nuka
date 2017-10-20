@@ -208,9 +208,11 @@ class upgrade(Task):
             miss_packages = []
             #  we check for all package it they are endeed installed
             for package in self.args['packages']:
-                is_present = self.sh(['dpkg-query', '-W', package],
+                is_present = self.sh(['dpkg-query',
+                                      '-f', '\'${Status}\'',
+                                      '-W', package],
                                      check=False)
-                if is_present['rc']:
+                if is_present['rc'] or (is_present['stdout'].find("not-installed")>0) :
                     #  we don't want installed package
                     miss_packages.append(package)
                     continue
