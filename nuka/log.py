@@ -85,6 +85,8 @@ class HostFileHandler(logging.FileHandler):
         else:
             self.filename = os.path.join(logdir, '{0}.log'.format(host))
             self.rollover()
+        if not os.path.isdir(os.path.dirname(self.filename)):
+            os.makedirs(os.path.dirname(self.filename))
         super().__init__(self.filename, 'w')
         fmt = nuka.config['log']['formats']['default']
         self.setFormatter(logging.Formatter(fmt))
