@@ -9,6 +9,8 @@ import codecs
 from nuka.tasks import http
 from nuka.task import Task
 
+import logging as log
+
 GPG_HEADER = b'-----BEGIN PGP PUBLIC KEY BLOCK-----'
 
 
@@ -175,7 +177,25 @@ class list(Task):
 
         return res
 
+class search(Task):
 
+    #ignore_errors = True
+
+    def __init__(self, packages, **kwargs):
+        kwargs.update(packages=packages)
+        super(search, self).__init__(**kwargs)
+
+    def do(self):
+        packages = ' '.join(self.args['packages'])
+        query = self.sh(['dpkg-query',
+                         '-f', "'${Package}#${Status}#${Version}~\n'",
+                         '-W']+self.args['packages'],
+                        check=False)
+        if query['rc'] == 1 :
+            #not an error for dpkg-query
+            query['rc'] = 0
+        return query
+    
 class upgrade(Task):
 
     ignore_errors = True
