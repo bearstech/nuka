@@ -232,7 +232,8 @@ class upgrade(Task):
                                       '-f', '\'${Status}\'',
                                       '-W', package],
                                      check=False)
-                if is_present['rc'] or (is_present['stdout'].find("not-installed")>0) :
+                log.warn(is_present['stdout'])
+                if is_present['rc'] or (is_present['stdout'].find(" installed")<0) :
                     #  we don't want installed package
                     miss_packages.append(package)
                     continue
