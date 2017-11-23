@@ -177,25 +177,25 @@ class list(Task):
 
         return res
 
+
 class search(Task):
 
-    #ignore_errors = True
-
     def __init__(self, packages, **kwargs):
+        kwargs.setdefault('name', ', '.join(packages or []))
         kwargs.update(packages=packages)
         super(search, self).__init__(**kwargs)
 
     def do(self):
-        packages = ' '.join(self.args['packages'])
         query = self.sh(['dpkg-query',
                          '-f', "'${Package}#${Status}#${Version}~\n'",
-                         '-W']+self.args['packages'],
+                         '-W'] + self.args['packages'],
                         check=False)
-        if query['rc'] == 1 :
-            #not an error for dpkg-query
+        if query['rc'] == 1:
+            # not an error for dpkg-query
             query['rc'] = 0
         return query
-    
+
+
 class upgrade(Task):
 
     ignore_errors = True
@@ -233,7 +233,8 @@ class upgrade(Task):
                                       '-W', package],
                                      check=False)
                 log.warn(is_present['stdout'])
-                if is_present['rc'] or (is_present['stdout'].find(" installed")<0) :
+                if is_present['rc'] or \
+                   " installed" not in is_present['stdout']:
                     #  we don't want installed package
                     miss_packages.append(package)
                     continue
