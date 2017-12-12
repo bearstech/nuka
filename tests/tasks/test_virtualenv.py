@@ -1,9 +1,15 @@
 # -*- coding: utf-8 -*-
+import os
 import pytest
 import tempfile
 
 from nuka.tasks import file
 from nuka.tasks import virtualenv as venv
+
+pytestmark = [
+    pytest.mark.skipif(
+        'python2' in os.environ['ENV_NAME'], reason='need a recent pip'),
+]
 
 
 @pytest.mark.asyncio
