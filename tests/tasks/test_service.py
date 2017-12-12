@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from nuka.tasks import service
+from nuka.tasks import apt
 import pytest
 import os
 
@@ -8,6 +9,11 @@ pytestmark = [
     pytest.mark.skipif(
         'centos' in os.environ['ENV_NAME'], reason='exclude centos'),
 ]
+
+
+@pytest.mark.asyncio
+async def test_01_install_services(host):
+    await apt.install(['rsync'])
 
 
 @pytest.mark.asyncio
