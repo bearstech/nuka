@@ -284,12 +284,14 @@ class install(Task):
 
     def __init__(self, packages=None, debconf=None,
                  debian_frontend='noninteractive', debian_priority=None,
-                 update_cache=None, **kwargs):
+                 update_cache=None, install_recommends=False, **kwargs):
         kwargs.setdefault('name', ', '.join(packages or []))
         kwargs.update(packages=packages, debconf=debconf,
                       debian_priority=debian_priority,
                       debian_frontend=debian_frontend,
-                      update_cache=update_cache)
+                      update_cache=update_cache,
+                      install_recommends=install_recommends,
+                      )
         super(install, self).__init__(**kwargs)
 
     def get_packages_list(self, packages):
@@ -363,6 +365,8 @@ class install(Task):
             kwargs = {'env': env}
             args = ['apt-get', 'install', '-qqy',
                     '-oDpkg::Options::=--force-confold']
+            if not self.args.get('install_recommends'):
+                args.append('--no-install-recommends')
             if watch:
                 r, w = os.pipe2(os.O_NONBLOCK)
                 kwargs['stdout'] = os.fdopen(w)
