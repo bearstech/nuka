@@ -468,7 +468,7 @@ class setup(SetupTask):
             proc = await self.host.create_process(c, task=self)
             proc.stdin.write(stdin)
             await proc.stdin.drain()
-        except (LookupError, asyncssh.misc.Error) as e:
+        except (LookupError, OSError, asyncssh.misc.Error) as e:
             if isinstance(e, asyncssh.misc.Error):
                 e = LookupError(str(e), self.host)
             self.host.log.error(e.args[0])
@@ -482,7 +482,7 @@ class setup(SetupTask):
                 res = await proc.next_message()
             except asyncio.CancelledError:
                 raise
-            except LookupError as e:
+            except (LookupError, OSError) as e:
                 self.host.log.error(e.args[0])
                 self.host.fail(e)
                 return
