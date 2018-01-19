@@ -124,6 +124,35 @@ class rm(Task):
         return dict(rc=0, diff=diff)
 
 
+class mv(Task):
+    """rename/move a file or a directory"""
+
+    def __init__(self, src=None, dst=None, **kwargs):
+        kwargs.setdefault('name', src)
+        super(mv, self).__init__(src=src, dst=dst, **kwargs)
+
+    def do(self):
+        src = self.args['src']
+        dst = self.args['dst']
+        if not os.path.exists(src) and os.path.exists(dst):
+            # Consider the task already done
+            return dict(rc=0, changed=False)
+        try:
+            os.rename(src, dst)
+        except:
+            exc = self.format_exception()
+            return dict(rc=1, exc=exc)
+        return dict(rc=0, changed=True)
+
+    def diff(self):
+        src = self.args['src']
+        dst = self.args['dst']
+        diff = ''
+        if os.path.exists(src):
+            diff += "%s -> %s\n" % (src, dst)
+        return dict(rc=0, diff=diff)
+
+
 class chmod(Task):
     """apply chmod to dst"""
 
