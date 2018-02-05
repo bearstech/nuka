@@ -16,6 +16,7 @@
 # along with nuka. If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import sys
 import time
 import asyncio
 import resource
@@ -229,15 +230,15 @@ class BaseHost(object):
             self.log.debug5('wait for free fds')
             await asyncio.sleep(.5, loop=self.loop)
         sessions = self._sessions
-        l = len(sessions)
-        if l >= self.max_sessions:  # pragma: no cover
+        ll = len(sessions)
+        if ll >= self.max_sessions:  # pragma: no cover
             self.log.debug5('wait for a session')
-            while l >= self.max_sessions:
+            while ll >= self.max_sessions:
                 if not self.cancelled():
                     await asyncio.sleep(.5, loop=self.loop)
                 else:
                     return sessions
-                l = len(sessions)
+                ll = len(sessions)
         self.__class__.processes_count += 1
         sessions.append(1)
 
@@ -283,6 +284,11 @@ class BaseHost(object):
                 await asyncio.wait(coros)
             except ConnectionResetError:
                 pass
+
+    @classmethod
+    def from_stdin(cls):
+        for line in sys.stdin:
+            yield cls(hostname=line.strip())
 
 
 class Host(BaseHost):

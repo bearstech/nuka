@@ -156,6 +156,10 @@ def run(*coros, timeout=None):
         return res_with_exc
 
 
+def run_all(coro, *hosts, **kwargs):
+    return run(*[coro(h) for h in hosts], **kwargs)
+
+
 def on_sigint(*args, **kwargs):
     hosts = config['all_hosts'].values()
     run_vars['sigint'] = run_vars['sigint'] + 1
