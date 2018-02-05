@@ -153,3 +153,16 @@ async def test_update(host):
 
     res = await file.cat('/etc/default/useradd')
     assert 'HOME=/new_home' not in res.content
+
+
+@pytest.mark.asyncio
+async def test_mv(host):
+    with open('/tmp/to_move.txt', 'wb') as fd:
+        fd.write(b'yo')
+    res = await file.put([dict(
+        src='/tmp/to_move.txt', dst='/tmp/to_move.txt',
+        )])
+    res = await file.mv(src='/tmp/to_move.txt', dst='/tmp/moved.txt')
+    assert bool(res)
+    res = await file.cat('/tmp/moved.txt')
+    assert res.content.strip() == 'yo'

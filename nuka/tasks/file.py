@@ -107,7 +107,7 @@ class rm(Task):
                     else:
                         os.remove(dst)
                     changed = True
-                except:
+                except OSError:
                     exc = self.format_exception()
                     return dict(rc=1, exc=exc)
         return dict(rc=0, changed=changed)
@@ -139,7 +139,7 @@ class mv(Task):
             return dict(rc=0, changed=False)
         try:
             os.rename(src, dst)
-        except:
+        except OSError:
             exc = self.format_exception()
             return dict(rc=1, exc=exc)
         return dict(rc=0, changed=True)
