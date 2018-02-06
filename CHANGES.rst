@@ -1,8 +1,9 @@
 0.3 (unreleased)
 ================
 
-- Nothing changed yet.
+- added `file.mv()`
 
+- clever handling of Ctrl-C
 
 0.2 (2017-09-24)
 ================
