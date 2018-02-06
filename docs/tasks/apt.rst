@@ -46,6 +46,13 @@ nuka.tasks.apt.list
 
 
 
+nuka.tasks.apt.search
+==================================================================
+
+.. autofunction:: search
+
+
+
 nuka.tasks.apt.source
 ==================================================================
 
@@ -91,6 +98,13 @@ Example:
 
     res = await apt.update(cache=3600)
     assert bool(res)
+
+
+
+nuka.tasks.apt.upgrade
+==================================================================
+
+.. autofunction:: upgrade
 
 
 
