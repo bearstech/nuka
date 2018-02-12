@@ -8,12 +8,12 @@ Here is a simple example:
 .. literalinclude:: ../examples/tasks/timezone.py
 
 You must be sure that your code is compatible with the python binaries you use
-locally and remotly (2.x vs 3.x).
+locally and remotely (2.x vs 3.x).
 
 nuka's builtin tasks support python 2.7 and 3.4+
 
-Good practice wnat that your task are isolated in a ``tasks`` package and that
-they only use python's stdlib.
+As a good practice your task should be isolated in a tasks package and must
+only use python's stdlib.
 
 Once it's done, you can use it:
 
