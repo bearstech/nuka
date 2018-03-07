@@ -288,7 +288,7 @@ async def create(cmd, host, task=None):
                     asyncssh_connections_tasks[uid] = loop.create_task(
                         asyncssh.create_connection(
                             lambda: SSHClient(uid),
-                            hostname, port,
+                            hostname, int(port),
                             username=username,
                             known_hosts=known_hosts,
                             agent_forwarding=agent_forwarding,

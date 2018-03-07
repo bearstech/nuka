@@ -42,7 +42,7 @@ setup(
         'pyaml',
         'jinja2',
         'uvloop',
-        'asyncssh',
+        'asyncssh>=1.12.0',
     ],
     extras_require={
         'full': ['tox'] + full,
