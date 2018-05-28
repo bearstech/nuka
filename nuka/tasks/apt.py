@@ -57,7 +57,11 @@ class source(Task):
                 dst = key
             with open(dst, 'rb') as fd:
                 data = fd.read()
-            fname = '/etc/apt/trusted.gpg.d/{0}.gpg'.format(self.args['name'])
+            if key.endswith('.gpg'):
+                name = os.path.basename(key)
+            else:
+                name = self.args['name']
+            fname = '/etc/apt/trusted.gpg.d/{0}.gpg'.format(name)
             if GPG_HEADER in data:
                 self.sh('gpg --dearmor > {0}'.format(fname),
                         shell=True, stdin=data)
