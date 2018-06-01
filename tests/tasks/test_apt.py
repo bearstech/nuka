@@ -24,7 +24,7 @@ async def test_source_doc(host):
         src=src,
     )
     assert bool(res)
-    src = 'deb http://deb.bearstech.com/debian {0}-bearstech main'.format(n)
+    src = 'deb https://deb.bearstech.com/debian {0}-bearstech main'.format(n)
     res = await apt.source(
         name='bearstech',
         key='https://deb.bearstech.com/bearstech-archive.gpg',
