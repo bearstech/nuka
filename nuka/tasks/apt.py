@@ -87,6 +87,8 @@ class source(Task):
                     changed = False
         if changed:
             key = self.args['key']
+            if not isinstance(key, tuple):
+                key = str(key)
             if key is not None:
                 self.add_key(key)
             with codecs.open(dst, 'w', 'utf8') as fd:

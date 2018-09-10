@@ -34,7 +34,7 @@ def safe_iterator(iterator=None):
         if iterator is not None:
             try:
                 utils._next(iterator)
-            except:
+            except Exception:
                 logging.exception(iterator)
         yield
 
@@ -57,6 +57,8 @@ class RemoteTask(object):
 
 class Task(RemoteTask):
     """Remote task"""
+
+    python_version = sys.version_info[:2]
 
     current_process_watcher = None
     current_process = None
