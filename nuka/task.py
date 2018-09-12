@@ -335,7 +335,8 @@ class Task(Base, RemoteTask):
             log.error('{0}\n{1}'.format(self, exc))
         elif self.res.get('stderr'):
             if self.res.get('rc') != 0:
-                log.error('{0}\n{1}'.format(self, self.res['stderr']))
+                log.error('{0}\n{1}\n{2}'.format(
+                    self, self.res.get('stdout', ''), self.res['stderr']))
             elif self.res['changed']:
                 log.changed('{0}\n{1}'.format(self, self.res['stderr']))
         else:
@@ -410,7 +411,7 @@ class boot(SetupTask):
         # wait for boot async
         try:
             await self.host.boot()
-        except:
+        except Exception:
             self.host.log.exception('boot')
         self.meta['start'] = self.host._start
 
