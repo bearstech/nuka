@@ -67,6 +67,7 @@ try:
 except ImportError:
     importlib = None  # NOQA
 
+ARCHIVE_EXTS = ('.gz', '.tar', '.zip')
 
 LOG = 60
 logging.addLevelName(LOG, 'LOG')

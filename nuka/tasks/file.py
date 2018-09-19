@@ -6,6 +6,7 @@ from nuka.task import Task
 from nuka import utils
 import logging
 import codecs
+import base64
 import stat
 import glob
 import re
@@ -241,14 +242,27 @@ class put(Task):
                     files_changed.append(dst)
             else:
                 data = fd['data']
+                if dst.endswith(utils.ARCHIVE_EXTS):
+                    if not isinstance(data, bytes):
+                        data = data.encode('utf8')
+                    data = base64.b64decode(data)
                 if os.path.exists(dst):
-                    with codecs.open(dst, 'rb', 'utf8') as fd_:
-                        if data != fd_.read():
-                            files_changed.append(dst)
+                    if dst.endswith(utils.ARCHIVE_EXTS):
+                        with open(dst, 'rb') as fd_:
+                            if data != fd_.read():
+                                files_changed.append(dst)
+                    else:
+                        with codecs.open(dst, 'rb', 'utf8') as fd_:
+                            if data != fd_.read():
+                                files_changed.append(dst)
                 else:
                     files_changed.append(dst)
-                with codecs.open(dst, 'wb', 'utf8') as fd_:
-                    fd_.write(data)
+                if dst.endswith(utils.ARCHIVE_EXTS):
+                    with open(dst, 'wb') as fd_:
+                        fd_.write(data)
+                else:
+                    with codecs.open(dst, 'wb', 'utf8') as fd_:
+                        fd_.write(data)
             mod = fd.get('mod')
             if mod is None and fd.get('executable'):
                 st = os.stat(dst)

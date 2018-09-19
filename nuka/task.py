@@ -16,6 +16,7 @@
 # along with nuka. If not, see <http://www.gnu.org/licenses/>.
 
 import time
+import base64
 import codecs
 import inspect
 import asyncio
@@ -136,6 +137,10 @@ class Base(asyncio.Future):
         src = fd['src']
         if src.endswith('.gpg'):
             _, data = gpg.decrypt(src, 'utf8')
+        elif src.endswith(utils.ARCHIVE_EXTS):
+            with open(src, 'rb',) as fd_:
+                data = fd_.read()
+                data = base64.b64encode(data).decode('utf8')
         else:
             with codecs.open(src, 'r', 'utf8') as fd_:
                 data = fd_.read()
